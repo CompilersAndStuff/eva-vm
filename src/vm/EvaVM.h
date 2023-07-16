@@ -10,14 +10,15 @@
 
 #include "../Logger.h"
 #include "../bytecode/OpCode.h"
-#include "EvaValue.h"
+#include "../compiler/EvaCompiler.h"
 #include "../parser/EvaParser.h"
+#include "EvaValue.h"
 
 using syntax::EvaParser;
 
 #define READ_BYTE() *ip++
 
-#define GET_CONST() constants[READ_BYTE()]
+#define GET_CONST() co->constants[READ_BYTE()]
 
 #define STACK_LIMIT 512
 
@@ -30,7 +31,9 @@ using syntax::EvaParser;
 
 class EvaVM {
 public:
-  EvaVM() : parser(std::make_unique<EvaParser>()) {}
+  EvaVM()
+      : parser(std::make_unique<EvaParser>()),
+        compiler(std::make_unique<EvaCompiler>()) {}
 
   void push(const EvaValue &value) {
     if ((size_t)(sp - stack.begin()) == STACK_LIMIT) {
@@ -51,12 +54,9 @@ public:
   EvaValue exec(const std::string &program) {
     auto ast = parser->parse(program);
 
-    constants.push_back(ALLOC_STRING("Hello, "));
-    constants.push_back(ALLOC_STRING("world!"));
+    co = compiler->compile(ast);
 
-    code = {OP_CONST, 0, OP_CONST, 1, OP_ADD, OP_HALT};
-
-    ip = &code[0];
+    ip = &co->code[0];
 
     sp = &stack[0];
 
@@ -117,15 +117,15 @@ public:
 
   std::unique_ptr<EvaParser> parser;
 
+  std::unique_ptr<EvaCompiler> compiler;
+
   uint8_t *ip;
 
   EvaValue *sp;
 
   std::array<EvaValue, STACK_LIMIT> stack;
 
-  std::vector<EvaValue> constants;
-
-  std::vector<uint8_t> code;
+  CodeObject *co;
 };
 
 #endif
