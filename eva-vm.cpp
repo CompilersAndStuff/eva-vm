@@ -7,10 +7,10 @@ int main(int argc, char *argv[]) {
   EvaVM vm;
 
   auto result = vm.exec(R"(
-                            "Hello!"
+                            (+ "Hello, " "World!")
                           )");
 
-  log(AS_CPPSTRING(result))
+  log(result);
 
   std::cout << "All done!\n";
 
