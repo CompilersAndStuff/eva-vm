@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
                             42
                           )");
 
-  log(AS_NUMBER(result))
+  log(AS_CPPSTRING(result))
 
   std::cout << "All done!\n";
 

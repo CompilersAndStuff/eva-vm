@@ -46,11 +46,10 @@ public:
 
   EvaValue exec(const std::string &program) {
 
-    constants.push_back(NUMBER(10));
-    constants.push_back(NUMBER(3));
-    constants.push_back(NUMBER(10));
+    constants.push_back(ALLOC_STRING("Hello, "));
+    constants.push_back(ALLOC_STRING("world!"));
 
-    code = {OP_CONST, 0, OP_CONST, 1, OP_MUL, OP_CONST, 2, OP_SUB, OP_HALT};
+    code = {OP_CONST, 0, OP_CONST, 1, OP_ADD, OP_HALT};
 
     ip = &code[0];
 
@@ -72,7 +71,21 @@ public:
         break;
 
       case OP_ADD: {
-        BINARY_OP(+);
+        auto op1 = pop();
+        auto op2 = pop();
+
+        if (IS_NUMBER(op1) && IS_NUMBER(op2)) {
+          auto v1 = AS_NUMBER(op1);
+          auto v2 = AS_NUMBER(op2);
+          push(NUMBER(v1 + v2));
+        }
+
+        else if (IS_STRING(op1) && IS_STRING(op2)) {
+          auto s2 = AS_CPPSTRING(op1);
+          auto s1 = AS_CPPSTRING(op2);
+          push(ALLOC_STRING(s1 + s2));
+        }
+
         break;
       }
 
