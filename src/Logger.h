@@ -15,6 +15,6 @@ class ErrorLogMessage : public std::basic_ostringstream<char> {
 
 #define DIE ErrorLogMessage()
 
-#define log(value) std::cout << #value << " = " << (value) << "\n";
+#define log(value) std::cout << #value << " = " << (value) << std::endl;
 
 #endif

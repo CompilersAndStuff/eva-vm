@@ -5,9 +5,11 @@
 int main(int argc, char *argv[]) {
   EvaVM vm;
 
-  vm.exec(R"(
-             42
-            )");
+  auto result = vm.exec(R"(
+                            42
+                          )");
+
+  log(AS_NUMBER(result))
 
   std::cout << "All done!\n";
 
