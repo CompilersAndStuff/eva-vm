@@ -32,12 +32,11 @@ struct EvaValue {
   ((EvaValue){EvaValueType::OBJECT,                                            \
               .object = (Object *)new StringObject(value)})
 
-
 #define AS_NUMBER(evaValue) ((double)(evaValue).number)
 
-#define AS_OBJECT(evaValue) ((Object*)(evaValue).object)
+#define AS_OBJECT(evaValue) ((Object *)(evaValue).object)
 
-#define AS_STRING(evaValue) ((StringObject*)(evaValue).object)
+#define AS_STRING(evaValue) ((StringObject *)(evaValue).object)
 #define AS_CPPSTRING(evaValue) (AS_STRING(evaValue)->string)
 
 #define IS_NUMBER(evaValue) ((evaValue).type == EvaValueType::NUMBER)
