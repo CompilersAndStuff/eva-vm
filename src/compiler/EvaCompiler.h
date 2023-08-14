@@ -2,11 +2,13 @@
 #define EvaCompiler_h
 
 #include "../bytecode/OpCode.h"
+#include "../disassembler/EvaDisassembler.h"
 #include "../parser/EvaParser.h"
 #include "../vm/EvaValue.h"
 #include <_types/_uint16_t.h>
 #include <_types/_uint8_t.h>
 #include <map>
+#include <memory>
 
 #define ALLOC_CONST(tester, converter, allocator, value)                       \
   do {                                                                         \
@@ -30,7 +32,7 @@
 
 class EvaCompiler {
 public:
-  EvaCompiler() {}
+  EvaCompiler() : disassembler(std::make_unique<EvaDisassembler>()) {}
 
   CodeObject *compile(const Exp &exp) {
     co = AS_CODE(ALLOC_CODE("main"));
@@ -105,7 +107,7 @@ public:
           auto endAddr = getOffset() - 2;
           auto elseBranchAddr = getOffset();
           patchJumpAddress(elseJmpAddr, elseBranchAddr);
-          if (exp.list.size() == 4 ) {
+          if (exp.list.size() == 4) {
             gen(exp.list[3]);
           }
           auto endBranchAddr = getOffset();
@@ -117,8 +119,12 @@ public:
     }
   }
 
+  void disassembleBytecode() { disassembler->disassemble(co); }
+
 private:
-    size_t getOffset() { return co->code.size(); }
+  std::unique_ptr<EvaDisassembler> disassembler;
+
+  size_t getOffset() { return co->code.size(); }
 
   size_t numericConstIdx(double value) {
     ALLOC_CONST(IS_NUMBER, AS_NUMBER, NUMBER, value);

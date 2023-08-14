@@ -91,13 +91,16 @@ public:
 
     sp = &stack[0];
 
+    compiler->disassembleBytecode();
+    std::cout << "\n";
+
     return eval();
   }
 
   EvaValue eval() {
     for (;;) {
       auto opcode = READ_BYTE();
-      log(opcode);
+      // log(opcode);
       switch (opcode) {
       case OP_HALT:
         return pop();
