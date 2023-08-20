@@ -3,6 +3,7 @@
 
 #include "../bytecode/OpCode.h"
 #include "../disassembler/EvaDisassembler.h"
+#include "../vm/Global.h"
 #include "../parser/EvaParser.h"
 #include "../vm/EvaValue.h"
 #include <_types/_uint16_t.h>
@@ -32,7 +33,9 @@
 
 class EvaCompiler {
 public:
-  EvaCompiler() : disassembler(std::make_unique<EvaDisassembler>()) {}
+  EvaCompiler(std::shared_ptr<Global> global)
+      : global(global),
+        disassembler(std::make_unique<EvaDisassembler>(global)) {}
 
   CodeObject *compile(const Exp &exp) {
     co = AS_CODE(ALLOC_CODE("main"));
@@ -61,7 +64,11 @@ public:
         emit(OP_CONST);
         emit(booleanConstIdx(exp.string == "true" ? true : false));
       } else {
-        // Variables
+        if (!global->exists(exp.string)) {
+          DIE << "[EvaCompiler]: Reference error: " << exp.string;
+        }
+        emit(OP_GET_GLOBAL);
+        emit(global->getGlobalIndex(exp.string));
       }
       break;
 
@@ -113,6 +120,28 @@ public:
           auto endBranchAddr = getOffset();
           patchJumpAddress(endAddr, endBranchAddr);
         }
+
+        else if (op == "var") {
+          auto varName = exp.list[1].string;
+          global->define(varName);
+
+          gen(exp.list[2]);
+          emit(OP_SET_GLOBAL);
+          emit(global->getGlobalIndex(varName));
+        }
+
+        else if (op == "set") {
+          auto varName = exp.list[1].string;
+
+          gen(exp.list[2]);
+
+          auto globalIndex = global->getGlobalIndex(varName);
+          if (globalIndex == -1) {
+            DIE << "Reference error: " << varName << " is not defined.";
+          }
+          emit(OP_SET_GLOBAL);
+          emit(global->getGlobalIndex(exp.list[1].string));
+        }
       }
 
       break;
@@ -122,6 +151,8 @@ public:
   void disassembleBytecode() { disassembler->disassemble(co); }
 
 private:
+  std::shared_ptr<Global> global;
+
   std::unique_ptr<EvaDisassembler> disassembler;
 
   size_t getOffset() { return co->code.size(); }

@@ -21,6 +21,9 @@
 #define OP_JMP_IF_FALSE 0x07
 #define OP_JMP 0x08
 
+#define OP_GET_GLOBAL 0x09
+#define OP_SET_GLOBAL 0x10
+
 #define OP_STR(op) case OP_##op: return #op
 
 std::string opcodeToString(uint8_t opcode) {
@@ -34,6 +37,8 @@ std::string opcodeToString(uint8_t opcode) {
     OP_STR(COMPARE);
     OP_STR(JMP_IF_FALSE);
     OP_STR(JMP);
+    OP_STR(GET_GLOBAL);
+    OP_STR(SET_GLOBAL);
     default:
       DIE << "opcodeToString: unknown opcode: " << opcode;
   }
