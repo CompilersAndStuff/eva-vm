@@ -8,7 +8,15 @@ int main(int argc, char *argv[]) {
 
   auto result = vm.exec(R"(
 
+                        (var x 5)
                         (set x (+ x 10))
+
+                        (begin
+                          (set x 1000)
+                          (var x 100)
+                          x)
+
+                        x
 
                        )");
 

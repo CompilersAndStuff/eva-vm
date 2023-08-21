@@ -94,14 +94,23 @@ public:
     return *(sp - 1 - offset);
   }
 
+  void popN(size_t count) {
+    if (stack.size() == 0) {
+      DIE << "popN(): empty stack.\n";
+    }
+    sp -= count;
+  }
+
   EvaValue exec(const std::string &program) {
-    auto ast = parser->parse(program);
+    auto ast = parser->parse("(begin" + program + ")");
 
     co = compiler->compile(ast);
 
     ip = &co->code[0];
 
     sp = &stack[0];
+
+    bp = sp;
 
     compiler->disassembleBytecode();
     std::cout << "\n";
@@ -201,6 +210,41 @@ public:
         break;
       }
 
+      case OP_POP: {
+        pop();
+        break;
+      }
+
+      case OP_GET_LOCAL: {
+        auto localIndex = READ_BYTE();
+
+        if (localIndex < 0 || localIndex >= stack.size()) {
+          DIE << "OP_GET_LOCAL: invalid variable index: " << (int)localIndex;
+        }
+        push(bp[localIndex]);
+        break;
+      }
+
+      case OP_SET_LOCAL: {
+        auto localIndex = READ_BYTE();
+        auto value = peek(0);
+
+        if (localIndex < 0 || localIndex >= stack.size()) {
+          DIE << "OP_SET_LOCAL: invalid variable index: " << (int)localIndex;
+        }
+        bp[localIndex] = value;
+        break;
+      }
+
+      case OP_SCOPE_EXIT: {
+        auto count = READ_BYTE();
+
+        *(sp - 1 - count) = peek(0);
+
+        popN(count);
+        break;
+      }
+
       default:
         DIE << "Unknown opcode: " << std::hex << opcode;
       }
@@ -208,8 +252,7 @@ public:
   }
 
   void setGlobalVariables() {
-    global->addConst("x", 10);
-    global->addConst("y", 20);
+    global->addConst("VERSION", 1);
   }
 
   std::shared_ptr<Global> global;
@@ -221,6 +264,8 @@ public:
   uint8_t *ip;
 
   EvaValue *sp;
+
+  EvaValue *bp;
 
   std::array<EvaValue, STACK_LIMIT> stack;
 

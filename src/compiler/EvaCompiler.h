@@ -64,11 +64,20 @@ public:
         emit(OP_CONST);
         emit(booleanConstIdx(exp.string == "true" ? true : false));
       } else {
-        if (!global->exists(exp.string)) {
-          DIE << "[EvaCompiler]: Reference error: " << exp.string;
+        auto varName = exp.string;
+
+        auto localIndex = co->getLocalIndex(varName);
+
+        if (localIndex != -1) {
+          emit(OP_GET_LOCAL);
+          emit(localIndex);
+        } else {
+          if (!global->exists(varName)) {
+            DIE << "[EvaCompiler]: Reference error: " << varName;
+          }
+          emit(OP_GET_GLOBAL);
+          emit(global->getGlobalIndex(varName));
         }
-        emit(OP_GET_GLOBAL);
-        emit(global->getGlobalIndex(exp.string));
       }
       break;
 
@@ -123,11 +132,20 @@ public:
 
         else if (op == "var") {
           auto varName = exp.list[1].string;
-          global->define(varName);
 
           gen(exp.list[2]);
-          emit(OP_SET_GLOBAL);
-          emit(global->getGlobalIndex(varName));
+
+          if (isGlobalScope()) {
+            global->define(varName);
+            emit(OP_SET_GLOBAL);
+            emit(global->getGlobalIndex(varName));
+          }
+
+          else {
+            co->addLocal(varName);
+            emit(OP_SET_LOCAL);
+            emit(co->getLocalIndex(varName));
+          }
         }
 
         else if (op == "set") {
@@ -135,12 +153,39 @@ public:
 
           gen(exp.list[2]);
 
-          auto globalIndex = global->getGlobalIndex(varName);
-          if (globalIndex == -1) {
-            DIE << "Reference error: " << varName << " is not defined.";
+          auto localIndex = co->getLocalIndex(varName);
+
+          if (localIndex != -1) {
+            emit(OP_SET_LOCAL);
+            emit(localIndex);
           }
-          emit(OP_SET_GLOBAL);
-          emit(global->getGlobalIndex(exp.list[1].string));
+
+          else {
+            auto globalIndex = global->getGlobalIndex(varName);
+            if (globalIndex == -1) {
+              DIE << "Reference error: " << varName << " is not defined.";
+            }
+            emit(OP_SET_GLOBAL);
+            emit(global->getGlobalIndex(exp.list[1].string));
+          }
+        }
+
+        else if (op == "begin") {
+          scopeEnter();
+
+          for (auto i = 1; i < exp.list.size(); i++) {
+            bool isLast = i == exp.list.size() - 1;
+
+            auto isLocalDeclaration = isDeclaration(exp.list[i]) && !isGlobalScope();
+
+            gen(exp.list[i]);
+
+            if (!isLast && !isLocalDeclaration) {
+              emit(OP_POP);
+            }
+          }
+
+          scopeExit();
         }
       }
 
@@ -154,6 +199,45 @@ private:
   std::shared_ptr<Global> global;
 
   std::unique_ptr<EvaDisassembler> disassembler;
+
+  void scopeEnter() { co->scopeLevel++; }
+
+  void scopeExit() {
+    auto varsCount = getVarsCountOnScopeExit();
+
+    if (varsCount > 0) {
+      emit(OP_SCOPE_EXIT);
+      emit(varsCount);
+    }
+
+    co->scopeLevel--;
+  }
+
+  bool isGlobalScope() { return co->name == "main" && co->scopeLevel == 1; }
+
+  bool isDeclaration(const Exp &exp) { return isVariableDeclaration(exp); }
+
+  bool isVariableDeclaration(const Exp &exp) {
+    return isTaggedList(exp, "var");
+  }
+
+  bool isTaggedList(const Exp &exp, const std::string &tag) {
+    return exp.type == ExpType::LIST && exp.list[0].type == ExpType::SYMBOL &&
+           exp.list[0].string == tag;
+  }
+
+  size_t getVarsCountOnScopeExit() {
+    auto varsCount = 0;
+
+    if (co->locals.size() > 0) {
+      while (co->locals.back().scopeLevel == co->scopeLevel) {
+        co->locals.pop_back();
+        varsCount++;
+      }
+    }
+
+    return varsCount;
+  }
 
   size_t getOffset() { return co->code.size(); }
 
