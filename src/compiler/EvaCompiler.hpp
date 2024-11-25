@@ -8,6 +8,7 @@
 #include "../vm/Global.hpp"
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #define ALLOC_CONST(tester, converter, allocator, value)                       \
   do {                                                                         \
@@ -167,16 +168,39 @@ public:
           for (auto i = 1; i < exp.list.size(); i++) {
             bool isLast = i == exp.list.size() - 1;
 
-            /*auto isLocalDeclaration =*/
-            /*    isDeclaration(exp.list[i]) && !isGlobalScope();*/
-
             gen(exp.list[i]);
-            if (!isLast /* && !isLocalDeclaration */) {
+
+            if (!isLast && !isWhileLoop(exp.list[i])) {
               emit(OP_POP);
             }
           }
 
           scopeExit();
+        }
+
+        else if (op == "while") {
+          auto loopStartAddr = getOffset();
+          gen(exp.list[1]); // Tester expr
+          emit(OP_JMP_IF_FALSE);
+          emit(0); // Placeholder for the address of the loop end
+          emit(0);
+          auto loopEndJmpPlaceholderAddr = getOffset() - 2;
+          auto loopBody = exp.list[2];
+          if (!isTaggedList(
+                  exp.list[2],
+                  "begin")) { // if loop body is not wrapped in begin block
+            std::vector<Exp> beginList;
+            std::string beginStr = "begin";
+            beginList.push_back(Exp(beginStr));
+            beginList.push_back(exp.list[2]);
+            loopBody = Exp(beginList);
+          }
+          gen(exp.list[2]); // Loop body
+          emit(OP_JMP);
+          emit(0); // Placeholder for the address of the loop start
+          emit(0);
+          patchJumpAddress(loopEndJmpPlaceholderAddr, getOffset());
+          patchJumpAddress(getOffset() - 2, loopStartAddr);
         }
       }
     }
@@ -200,7 +224,7 @@ private:
 
   bool isGlobalScope() { return co->name == "main" && co->scopeLevel == 1; }
 
-  bool isDeclaration(const Exp &exp) { return isVarDeclaration(exp); }
+  bool isWhileLoop(const Exp &exp) { return isTaggedList(exp, "while"); }
 
   bool isVarDeclaration(const Exp &exp) { return isTaggedList(exp, "var"); }
 
