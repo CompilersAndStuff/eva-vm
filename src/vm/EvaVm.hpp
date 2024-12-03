@@ -115,6 +115,7 @@ public:
 
   EvaValue eval() {
     for (;;) {
+      dumpStack();
       auto opcode = READ_BYTE();
       switch (opcode) {
       case OP_HALT:
@@ -234,6 +235,22 @@ public:
         break;
       }
 
+      case OP_CALL: {
+        auto argsCount = READ_BYTE();
+        auto fnValue = peek(argsCount);
+
+        if (IS_NATIVE(fnValue)) {
+          AS_NATIVE(fnValue)->function();
+          auto result = pop();
+
+          popN(argsCount + 1);
+
+          push(result);
+
+          break;
+        }
+      }
+
       default:
         DIE << "Unknown opcode: " << std::hex << std::setw(2) << std::uppercase
             << std::setfill('0') << (int)opcode;
@@ -242,8 +259,15 @@ public:
   }
 
   void setGlobalVariables() {
+    global->addNativeFunction(
+        "native-square",
+        [&]() {
+          auto x = AS_NUMBER(peek(0));
+          push(NUMBER(x * x));
+        },
+        1);
+
     global->addConst("VERSION", 1);
-    global->addConst("y", 20);
   }
 
   std::unique_ptr<EvaParser> parser;
@@ -261,6 +285,18 @@ public:
   std::array<EvaValue, STACK_LIMIT> stack;
 
   CodeObject *co;
+
+  void dumpStack() {
+    std::cout << "\n-------------- Stack --------------\n";
+    if (sp == stack.begin()) {
+      std::cout << "(empty)";
+    }
+    auto csp = sp - 1;
+    while (csp >= stack.begin()) {
+      std::cout << *csp-- << "\n";
+    }
+    std::cout << "\n";
+  }
 };
 
 #endif // !__EvaVM_hpp

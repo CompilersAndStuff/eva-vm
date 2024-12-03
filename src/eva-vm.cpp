@@ -5,15 +5,7 @@ int main(int argc, char *argv[]) {
   EvaVm vm;
 
   auto program = R"(
-    (var i 10)
-    (var count 0)
-
-    (while (> i 0)
-      (begin 
-        (set i (- i 1))
-        (set count (+ count 1))))
-
-    count
+    (native-square 2)
   )";
 
   log(program);
