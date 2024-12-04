@@ -204,7 +204,7 @@ public:
 
       case OP_SET_GLOBAL: {
         auto globalIndex = READ_BYTE();
-        auto value = peek(0);
+        auto value = pop();
         global->set(globalIndex, value);
         break;
       }
@@ -230,7 +230,6 @@ public:
           DIE << "OP_SET_LOCAL: invalid variable index: " << (int)localIndex;
         }
         bp[localIndex] = value;
-        push(value);
         break;
       }
 

@@ -5,9 +5,16 @@ int main(int argc, char *argv[]) {
   EvaVm vm;
 
   auto program = R"(
-  (def square (x) (* x x))
+  (var x 1)
+  (var z 2)
 
-  (square 10)
+  (var y (+ x 1))
+
+  (begin 
+    (var a 10)
+    (var b 20)
+    (set a 100)
+    (+ a b))
   )";
 
   log(program);

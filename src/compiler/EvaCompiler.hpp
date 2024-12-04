@@ -152,8 +152,6 @@ public:
 
           else {
             co->addLocal(varName);
-            emit(OP_SET_LOCAL);
-            emit(co->getLocalIndex(varName));
           }
 
         } else if (op == "set") {
@@ -184,7 +182,9 @@ public:
 
             gen(exp.list[i]);
 
-            if (!isLast && !isWhileLoop(exp.list[i])) {
+            auto isDecl = isVarDeclaration(exp.list[i]);
+
+            if (!isLast && !isWhileLoop(exp.list[i]) && !isDecl) {
               emit(OP_POP);
             }
           }
