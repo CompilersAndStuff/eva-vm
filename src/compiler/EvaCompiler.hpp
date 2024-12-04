@@ -10,6 +10,16 @@
 #include <memory>
 #include <vector>
 
+#define FUNCTION_CALL(exp)                                                     \
+  do {                                                                         \
+    gen(exp.list[0]);                                                          \
+    for (auto i = 1; i < exp.list.size(); i++) {                               \
+      gen(exp.list[i]);                                                        \
+    }                                                                          \
+    emit(OP_CALL);                                                             \
+    emit(exp.list.size() - 1);                                                 \
+  } while (false)
+
 #define ALLOC_CONST(tester, converter, allocator, value)                       \
   do {                                                                         \
     for (auto i = 0; i < co->constants.size(); i++) {                          \
@@ -101,16 +111,16 @@ public:
         } else if (op == "if") {
           gen(exp.list[1]); // Generate tester expr
           emit(OP_JMP_IF_FALSE);
-          emit(0); // Set a placeholder for the address that will later point to
-                   // the beginning of the ELSE branch
+          emit(0); // Set a placeholder for the address that will later point
+                   // to the beginning of the ELSE branch
           emit(0); // The placeholder consists of two consecutive 8-bit cells
                    // representing a 16-bit address
           auto elseJmpPlaceholderAddr =
               getOffset() - 2; // Store the address of the placeholder
           gen(exp.list[2]);    // Generate the consequent branch
           emit(OP_JMP);
-          emit(0); // Set a placeholder for the address that will later point to
-                   // the beginning of the ELSE branch
+          emit(0); // Set a placeholder for the address that will later point
+                   // to the beginning of the ELSE branch
           emit(0); // The placeholder consists of two consecutive 8-bit cells
                    // representing a 16-bit address
           auto jmpPlaceholderAddr = getOffset() - 2;
@@ -127,7 +137,12 @@ public:
         } else if (op == "var") {
           auto varName = exp.list[1].string;
 
-          gen(exp.list[2]);
+          if (isLambda(exp.list[2])) {
+            compileFunction(exp.list[2], varName, exp.list[2].list[1],
+                            exp.list[2].list[2]);
+          } else {
+            gen(exp.list[2]);
+          }
 
           if (isGlobalScope()) {
             global->define(varName);
@@ -202,38 +217,8 @@ public:
           patchJumpAddress(getOffset() - 2, loopStartAddr);
         } else if (op == "def") {
           auto fnName = exp.list[1].string;
-          auto arity = exp.list[2].list.size();
-          auto prevCo = co;
-          auto coValue = createCodeObjectValue(fnName, arity);
-          auto body = exp.list[3];
-          co = AS_CODE(coValue);
 
-          prevCo->addConst(coValue);
-
-          co->addLocal(fnName);
-
-          for (auto i = 0; i < arity; i++) {
-            auto argName = exp.list[2].list[i].string;
-            co->addLocal(argName);
-          }
-
-          gen(body);
-
-          if (!isBlock(body)) {
-            emit(OP_SCOPE_EXIT);
-            emit(arity + 1);
-          }
-
-          emit(OP_RETURN);
-
-          auto fn = ALLOC_FUNCTION(co);
-
-          co = prevCo;
-
-          co->addConst(fn);
-
-          emit(OP_CONST);
-          emit(co->constants.size() - 1);
+          compileFunction(exp, fnName, exp.list[2], exp.list[3]);
 
           if (isGlobalScope()) {
             global->define(fnName);
@@ -241,19 +226,15 @@ public:
             emit(global->getGlobalIndex(fnName));
           } else {
             co->addLocal(fnName);
-            emit(OP_SET_LOCAL);
-            emit(co->getLocalIndex(fnName));
           }
+        } else if (op == "lambda") {
+          compileFunction(exp, "lambda", exp.list[1], exp.list[2]);
+
         } else {
-          gen(exp.list[0]);
-
-          for (auto i = 1; i < exp.list.size(); i++) {
-            gen(exp.list[i]);
-          }
-
-          emit(OP_CALL);
-          emit(exp.list.size() - 1);
+          FUNCTION_CALL(exp);
         }
+      } else {
+        FUNCTION_CALL(exp);
       }
     }
   }
@@ -275,6 +256,42 @@ private:
     auto co = AS_CODE(coValue);
     codeObjects_.push_back(co);
     return coValue;
+  }
+
+  void compileFunction(const Exp &exp, const std::string fnName,
+                       const Exp &params, const Exp &body) {
+
+    auto arity = params.list.size();
+    auto prevCo = co;
+    auto coValue = createCodeObjectValue(fnName, arity);
+    co = AS_CODE(coValue);
+
+    prevCo->addConst(coValue);
+
+    co->addLocal(fnName);
+
+    for (auto i = 0; i < arity; i++) {
+      auto argName = params.list[i].string;
+      co->addLocal(argName);
+    }
+
+    gen(body);
+
+    if (!isBlock(body)) {
+      emit(OP_SCOPE_EXIT);
+      emit(arity + 1);
+    }
+
+    emit(OP_RETURN);
+
+    auto fn = ALLOC_FUNCTION(co);
+
+    co = prevCo;
+
+    co->addConst(fn);
+
+    emit(OP_CONST);
+    emit(co->constants.size() - 1);
   }
 
   void scopeEnter() { co->scopeLevel++; }
@@ -299,6 +316,8 @@ private:
   bool isWhileLoop(const Exp &exp) { return isTaggedList(exp, "while"); }
 
   bool isBlock(const Exp &exp) { return isTaggedList(exp, "begin"); }
+
+  bool isLambda(const Exp &exp) { return isTaggedList(exp, "lambda"); }
 
   bool isVarDeclaration(const Exp &exp) { return isTaggedList(exp, "var"); }
 
