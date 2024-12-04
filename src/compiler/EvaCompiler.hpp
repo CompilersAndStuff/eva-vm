@@ -187,6 +187,10 @@ public:
             if (!isLast && !isWhileLoop(exp.list[i]) && !isDecl) {
               emit(OP_POP);
             }
+
+            if (isLast && isVarDeclaration(exp.list[i])) {
+              gen(exp.list[i].list[1]);
+            }
           }
 
           scopeExit();
