@@ -5,7 +5,9 @@ int main(int argc, char *argv[]) {
   EvaVm vm;
 
   auto program = R"(
-    (native-square 2)
+  (def square (x) (* x x))
+
+  (square 10)
   )";
 
   log(program);

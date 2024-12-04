@@ -20,7 +20,7 @@
         return i;                                                              \
       }                                                                        \
     }                                                                          \
-    co->constants.push_back(allocator(value));                                 \
+    co->addConst(allocator(value));                                            \
   } while (false)
 
 #define GEN_BINARY_OP(op)                                                      \
@@ -36,13 +36,12 @@ public:
       : global(global),
         disassembler(std::make_unique<EvaDisassembler>(global)) {}
 
-  CodeObject *compile(const Exp &exp) {
-    co = AS_CODE(ALLOC_CODE("main"));
+  void compile(const Exp &exp) {
+    co = AS_CODE(createCodeObjectValue("main"));
+    main = AS_FUNCTION(ALLOC_FUNCTION(co));
 
     gen(exp);
     emit(OP_HALT);
-
-    return co;
   }
 
   void gen(const Exp &exp) {
@@ -201,6 +200,50 @@ public:
           emit(0);
           patchJumpAddress(loopEndJmpPlaceholderAddr, getOffset());
           patchJumpAddress(getOffset() - 2, loopStartAddr);
+        } else if (op == "def") {
+          auto fnName = exp.list[1].string;
+          auto arity = exp.list[2].list.size();
+          auto prevCo = co;
+          auto coValue = createCodeObjectValue(fnName, arity);
+          auto body = exp.list[3];
+          co = AS_CODE(coValue);
+
+          prevCo->addConst(coValue);
+
+          co->addLocal(fnName);
+
+          for (auto i = 0; i < arity; i++) {
+            auto argName = exp.list[2].list[i].string;
+            co->addLocal(argName);
+          }
+
+          gen(body);
+
+          if (!isBlock(body)) {
+            emit(OP_SCOPE_EXIT);
+            emit(arity + 1);
+          }
+
+          emit(OP_RETURN);
+
+          auto fn = ALLOC_FUNCTION(co);
+
+          co = prevCo;
+
+          co->addConst(fn);
+
+          emit(OP_CONST);
+          emit(co->constants.size() - 1);
+
+          if (isGlobalScope()) {
+            global->define(fnName);
+            emit(OP_SET_GLOBAL);
+            emit(global->getGlobalIndex(fnName));
+          } else {
+            co->addLocal(fnName);
+            emit(OP_SET_LOCAL);
+            emit(co->getLocalIndex(fnName));
+          }
         } else {
           gen(exp.list[0]);
 
@@ -215,17 +258,35 @@ public:
     }
   }
 
-  void disassembleBytecode() { disassembler->disassemble(co); }
+  void disassembleBytecode() {
+    for (auto &co_ : codeObjects_) {
+      disassembler->disassemble(co_);
+    }
+  }
+
+  FunctionObject *getMainFunction() { return main; }
 
 private:
   std::shared_ptr<Global> global;
   std::unique_ptr<EvaDisassembler> disassembler;
 
+  EvaValue createCodeObjectValue(const std::string &name, size_t arity = 0) {
+    auto coValue = ALLOC_CODE(name, arity);
+    auto co = AS_CODE(coValue);
+    codeObjects_.push_back(co);
+    return coValue;
+  }
+
   void scopeEnter() { co->scopeLevel++; }
   void scopeExit() {
     auto varsCount = getVarsCountOnScopeExit();
-    if (varsCount > 0) {
+    if (varsCount > 0 || co->arity > 0) {
       emit(OP_SCOPE_EXIT);
+
+      if (isFunctionBody()) {
+        varsCount += co->arity + 1;
+      }
+
       emit(varsCount);
     }
     co->scopeLevel--;
@@ -233,7 +294,11 @@ private:
 
   bool isGlobalScope() { return co->name == "main" && co->scopeLevel == 1; }
 
+  bool isFunctionBody() { return co->name != "main" && co->scopeLevel == 1; }
+
   bool isWhileLoop(const Exp &exp) { return isTaggedList(exp, "while"); }
+
+  bool isBlock(const Exp &exp) { return isTaggedList(exp, "begin"); }
 
   bool isVarDeclaration(const Exp &exp) { return isTaggedList(exp, "var"); }
 
@@ -284,6 +349,10 @@ private:
   }
 
   CodeObject *co;
+
+  FunctionObject *main;
+
+  std::vector<CodeObject *> codeObjects_;
 
   static std::map<std::string, uint8_t> compareOps_;
 };

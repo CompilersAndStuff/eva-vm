@@ -19,9 +19,9 @@ using syntax::EvaParser;
 
 #define READ_BYTE() *ip++
 #define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
-#define TO_ADDRESS(index) &co->code[index]
+#define TO_ADDRESS(index) &fn->co->code[index]
 #define STACK_LIMIT 512
-#define GET_CONST() co->constants[READ_BYTE()]
+#define GET_CONST() fn->co->constants[READ_BYTE()]
 
 #define BINARY_OP(op)                                                          \
   do {                                                                         \
@@ -55,6 +55,12 @@ using syntax::EvaParser;
     }                                                                          \
     push(BOOLEAN(res));                                                        \
   } while (false)
+
+struct Frame {
+  uint8_t *ra;
+  EvaValue *bp;
+  FunctionObject *fn;
+};
 
 class EvaVm {
 public:
@@ -100,13 +106,15 @@ public:
   EvaValue exec(const std::string &program) {
     auto ast = parser->parse("(begin" + program + ")");
 
-    co = compiler->compile(ast);
+    compiler->compile(ast);
+
+    fn = compiler->getMainFunction();
 
     sp = &stack[0];
 
     bp = sp;
 
-    ip = &co->code[0];
+    ip = &fn->co->code[0];
 
     compiler->disassembleBytecode();
 
@@ -115,7 +123,7 @@ public:
 
   EvaValue eval() {
     for (;;) {
-      dumpStack();
+      /*dumpStack();*/
       auto opcode = READ_BYTE();
       switch (opcode) {
       case OP_HALT:
@@ -249,6 +257,26 @@ public:
 
           break;
         }
+
+        auto callee = AS_FUNCTION(fnValue);
+
+        callStack.push(Frame{ip, bp, fn});
+
+        fn = callee;
+        bp = sp - argsCount - 1;
+        ip = &callee->co->code[0];
+
+        break;
+      }
+
+      case OP_RETURN: {
+        auto callerFrame = callStack.top();
+        ip = callerFrame.ra;
+        bp = callerFrame.bp;
+        fn = callerFrame.fn;
+        callStack.pop();
+
+        break;
       }
 
       default:
@@ -284,7 +312,9 @@ public:
 
   std::array<EvaValue, STACK_LIMIT> stack;
 
-  CodeObject *co;
+  std::stack<Frame> callStack;
+
+  FunctionObject *fn;
 
   void dumpStack() {
     std::cout << "\n-------------- Stack --------------\n";
