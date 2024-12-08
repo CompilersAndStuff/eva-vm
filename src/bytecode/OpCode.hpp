@@ -21,6 +21,10 @@
 #define OP_SCOPE_EXIT 0xE
 #define OP_CALL 0xF
 #define OP_RETURN 0x10
+#define OP_GET_CELL 0x11
+#define OP_SET_CELL 0x12
+#define OP_LOAD_CELL 0x13
+#define OP_MAKE_FUNCTION 0x14
 
 #define OP_STR(op)                                                             \
   case OP_##op:                                                                \
@@ -45,6 +49,10 @@ std::string opcodeToString(uint8_t opcode) {
     OP_STR(SCOPE_EXIT);
     OP_STR(CALL);
     OP_STR(RETURN);
+    OP_STR(GET_CELL);
+    OP_STR(SET_CELL);
+    OP_STR(LOAD_CELL);
+    OP_STR(MAKE_FUNCTION);
 
   default:
     DIE << "opcodeToString: unknown opcode: " << (int)opcode;

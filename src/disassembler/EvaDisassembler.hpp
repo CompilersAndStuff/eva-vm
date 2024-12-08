@@ -59,7 +59,12 @@ private:
     case OP_GET_LOCAL:
     case OP_SET_LOCAL:
       return disassembleLocal(co, opcode, offset);
-
+    case OP_GET_CELL:
+    case OP_SET_CELL:
+    case OP_LOAD_CELL:
+      return disassembleCell(co, opcode, offset);
+    case OP_MAKE_FUNCTION:
+      return disassembleMakeFunction(co, opcode, offset);
     default:
       DIE << "disassembleInstruction: no disassembly for "
           << opcodeToString(opcode);
@@ -130,6 +135,19 @@ private:
     auto localIndex = co->code[offset + 1];
     std::cout << (int)localIndex << " (" << co->locals[localIndex].name << ")";
     return offset + 2;
+  }
+
+  size_t disassembleCell(CodeObject *co, uint8_t opcode, size_t offset) {
+    dumpBytes(co, offset, 2);
+    printOpCode(opcode);
+    auto cellIndex = co->code[offset + 1];
+    std::cout << (int)cellIndex << " (" << co->cellNames[cellIndex] << ")";
+    return offset + 2;
+  }
+
+  size_t disassembleMakeFunction(CodeObject *co, uint8_t opcode,
+                                 size_t offset) {
+    return disassembleWord(co, opcode, offset);
   }
 
   uint16_t readWordAtOffset(CodeObject *co, size_t offset) {
