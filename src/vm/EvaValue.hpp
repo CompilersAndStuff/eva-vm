@@ -77,6 +77,8 @@ struct CodeObject : public Object {
 
   std::vector<std::string> cellNames;
 
+  size_t nonCellFnParams = 0;
+
   size_t freeCount = 0;
 
   void addLocal(const std::string &name) {

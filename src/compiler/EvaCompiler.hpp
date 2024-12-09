@@ -374,6 +374,9 @@ private:
       if (cellIndex != -1) {
         emit(OP_SET_CELL);
         emit(cellIndex);
+        emit(OP_POP);
+      } else {
+        co->nonCellFnParams++;
       }
     }
 
@@ -381,7 +384,7 @@ private:
 
     if (!isBlock(body)) {
       emit(OP_SCOPE_EXIT);
-      emit(arity + 1);
+      emit(1 /*function itself*/ + co->nonCellFnParams);
     }
 
     emit(OP_RETURN);
@@ -420,7 +423,7 @@ private:
       emit(OP_SCOPE_EXIT);
 
       if (isFunctionBody()) {
-        varsCount += co->arity + 1;
+        varsCount += 1 /*Function itself*/ + co->nonCellFnParams ;
       }
 
       emit(varsCount);

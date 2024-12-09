@@ -287,7 +287,7 @@ public:
 
       case OP_SET_CELL: {
         auto cellIndex = READ_BYTE();
-        auto value = peek(cellIndex);
+        auto value = peek(0);
         if (fn->cells.size() <= cellIndex) {
           fn->cells.push_back(AS_CELL(ALLOC_CELL(value)));
         } else {
