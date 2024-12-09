@@ -2,6 +2,8 @@
 #define __EvaValue_hpp
 
 #include "../Logger.hpp"
+#include <cstdint>
+#include <functional>
 #include <sstream>
 #include <string>
 #include <vector>

@@ -2,6 +2,7 @@
 #define __OpCode_hpp
 
 #include "../Logger.hpp"
+#include <cstdint>
 #include <string>
 
 #define OP_HALT 0x00
