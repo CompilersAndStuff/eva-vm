@@ -17,7 +17,7 @@
     for (auto i = 1; i < exp.list.size(); i++) {                               \
       gen(exp.list[i]);                                                        \
     }                                                                          \
-    emit(OP_CALL);                                                             \
+    emit(static_cast<uint8_t>(OpCode::CALL));                                                             \
     emit(exp.list.size() - 1);                                                 \
   } while (false)
 
@@ -51,7 +51,7 @@ void EvaCompiler::compile(const Exp &exp) {
   analyze(exp, nullptr);
 
   gen(exp);
-  emit(OP_HALT);
+  emit(static_cast<uint8_t>(OpCode::HALT));
 }
 
 void EvaCompiler::analyze(const Exp &exp, std::shared_ptr<Scope> scope) {
@@ -123,18 +123,18 @@ void EvaCompiler::analyze(const Exp &exp, std::shared_ptr<Scope> scope) {
 void EvaCompiler::gen(const Exp &exp) {
   switch (exp.type) {
   case ExpType::NUMBER:
-    emit(OP_CONST);
+    emit(static_cast<uint8_t>(OpCode::CONST));
     emit(numericConstIdx(exp.number));
     break;
 
   case ExpType::STRING:
-    emit(OP_CONST);
+    emit(static_cast<uint8_t>(OpCode::CONST));
     emit(stringConstIdx(exp.string));
     break;
 
   case ExpType::SYMBOL:
     if (exp.string == "true" || exp.string == "false") {
-      emit(OP_CONST);
+      emit(static_cast<uint8_t>(OpCode::CONST));
       emit(booleanConstIdx(exp.string == "true" ? true : false));
     } else {
       auto varName = exp.string;
@@ -142,9 +142,9 @@ void EvaCompiler::gen(const Exp &exp) {
       auto opCodeGetter = scopeStack_.top()->getNameGetter(varName);
       emit(opCodeGetter);
 
-      if (opCodeGetter == OP_GET_LOCAL) {
+      if (opCodeGetter == static_cast<uint8_t>(OpCode::GET_LOCAL)) {
         emit(co->getLocalIndex(varName));
-      } else if (opCodeGetter == OP_GET_CELL) {
+      } else if (opCodeGetter == static_cast<uint8_t>(OpCode::GET_CELL)) {
         emit(co->getCellIndex(varName));
       } else {
         if (!global->exists(varName)) {
@@ -162,21 +162,21 @@ void EvaCompiler::gen(const Exp &exp) {
       auto op = tag.string;
 
       if (op == "+") {
-        GEN_BINARY_OP(OP_ADD);
+        GEN_BINARY_OP(static_cast<uint8_t>(OpCode::ADD));
       } else if (op == "-") {
-        GEN_BINARY_OP(OP_SUB);
+        GEN_BINARY_OP(static_cast<uint8_t>(OpCode::SUB));
       } else if (op == "*") {
-        GEN_BINARY_OP(OP_MUL);
+        GEN_BINARY_OP(static_cast<uint8_t>(OpCode::MUL));
       } else if (op == "/") {
-        GEN_BINARY_OP(OP_DIV);
+        GEN_BINARY_OP(static_cast<uint8_t>(OpCode::DIV));
       } else if (compareOps_.count(op) != 0) {
         gen(exp.list[1]);
         gen(exp.list[2]);
-        emit(OP_COMPARE);
+        emit(static_cast<uint8_t>(OpCode::COMPARE));
         emit(compareOps_[op]);
       } else if (op == "if") {
         gen(exp.list[1]); // Generate tester expr
-        emit(OP_JMP_IF_FALSE);
+        emit(static_cast<uint8_t>(OpCode::JMP_IF_FALSE));
         emit(0); // Set a placeholder for the address that will later point
                  // to the beginning of the ELSE branch
         emit(0); // The placeholder consists of two consecutive 8-bit cells
@@ -184,7 +184,7 @@ void EvaCompiler::gen(const Exp &exp) {
         auto elseJmpPlaceholderAddr =
             getOffset() - 2; // Store the address of the placeholder
         gen(exp.list[2]);    // Generate the consequent branch
-        emit(OP_JMP);
+        emit(static_cast<uint8_t>(OpCode::JMP));
         emit(0); // Set a placeholder for the address that will later point
                  // to the beginning of the ELSE branch
         emit(0); // The placeholder consists of two consecutive 8-bit cells
@@ -212,15 +212,15 @@ void EvaCompiler::gen(const Exp &exp) {
           gen(exp.list[2]);
         }
 
-        if (opCodeSetter == OP_SET_GLOBAL) {
+        if (opCodeSetter == static_cast<uint8_t>(OpCode::SET_GLOBAL)) {
           global->define(varName);
-          emit(OP_SET_GLOBAL);
+          emit(static_cast<uint8_t>(OpCode::SET_GLOBAL));
           emit(global->getGlobalIndex(varName));
-        } else if (opCodeSetter == OP_SET_CELL) {
+        } else if (opCodeSetter == static_cast<uint8_t>(OpCode::SET_CELL)) {
           co->cellNames.push_back(varName);
-          emit(OP_SET_CELL);
+          emit(static_cast<uint8_t>(OpCode::SET_CELL));
           emit(co->cellNames.size() - 1);
-          emit(OP_POP);
+          emit(static_cast<uint8_t>(OpCode::POP));
         } else {
           co->addLocal(varName);
         }
@@ -232,18 +232,18 @@ void EvaCompiler::gen(const Exp &exp) {
 
         gen(exp.list[2]);
 
-        if (opCodeSetter == OP_SET_LOCAL) {
-          emit(OP_SET_LOCAL);
+        if (opCodeSetter == static_cast<uint8_t>(OpCode::SET_LOCAL)) {
+          emit(static_cast<uint8_t>(OpCode::SET_LOCAL));
           emit(co->getLocalIndex(varName));
-        } else if (opCodeSetter == OP_SET_CELL) {
-          emit(OP_SET_CELL);
+        } else if (opCodeSetter == static_cast<uint8_t>(OpCode::SET_CELL)) {
+          emit(static_cast<uint8_t>(OpCode::SET_CELL));
           emit(co->getCellIndex(varName));
         } else {
           auto globalIndex = global->getGlobalIndex(exp.list[1].string);
           if (globalIndex == -1) {
             DIE << "Reference error: " << varName << " is not defined.";
           }
-          emit(OP_SET_GLOBAL);
+          emit(static_cast<uint8_t>(OpCode::SET_GLOBAL));
           emit(globalIndex);
         }
 
@@ -260,7 +260,7 @@ void EvaCompiler::gen(const Exp &exp) {
                         isFunctionDeclaration(exp.list[i]);
 
           if (!isLast && !isWhileLoop(exp.list[i]) && !isDecl) {
-            emit(OP_POP);
+            emit(static_cast<uint8_t>(OpCode::POP));
           }
 
           if (isLast && isVarDeclaration(exp.list[i])) {
@@ -275,7 +275,7 @@ void EvaCompiler::gen(const Exp &exp) {
       else if (op == "while") {
         auto loopStartAddr = getOffset();
         gen(exp.list[1]); // Tester expr
-        emit(OP_JMP_IF_FALSE);
+        emit(static_cast<uint8_t>(OpCode::JMP_IF_FALSE));
         emit(0); // Placeholder for the address of the loop end
         emit(0);
         auto loopEndJmpPlaceholderAddr = getOffset() - 2;
@@ -290,7 +290,7 @@ void EvaCompiler::gen(const Exp &exp) {
           loopBody = Exp(beginList);
         }
         gen(exp.list[2]); // Loop body
-        emit(OP_JMP);
+        emit(static_cast<uint8_t>(OpCode::JMP));
         emit(0); // Placeholder for the address of the loop start
         emit(0);
         patchJumpAddress(loopEndJmpPlaceholderAddr, getOffset());
@@ -302,7 +302,7 @@ void EvaCompiler::gen(const Exp &exp) {
 
         if (isGlobalScope()) {
           global->define(fnName);
-          emit(OP_SET_GLOBAL);
+          emit(static_cast<uint8_t>(OpCode::SET_GLOBAL));
           emit(global->getGlobalIndex(fnName));
         } else {
           co->addLocal(fnName);
@@ -365,9 +365,9 @@ void EvaCompiler::compileFunction(const Exp &exp, const std::string fnName,
 
     auto cellIndex = co->getCellIndex(argName);
     if (cellIndex != -1) {
-      emit(OP_SET_CELL);
+      emit(static_cast<uint8_t>(OpCode::SET_CELL));
       emit(cellIndex);
-      emit(OP_POP);
+      emit(static_cast<uint8_t>(OpCode::POP));
     } else {
       co->nonCellFnParams++;
     }
@@ -376,11 +376,11 @@ void EvaCompiler::compileFunction(const Exp &exp, const std::string fnName,
   gen(body);
 
   if (!isBlock(body)) {
-    emit(OP_SCOPE_EXIT);
+    emit(static_cast<uint8_t>(OpCode::SCOPE_EXIT));
     emit(1 /*function itself*/ + co->nonCellFnParams);
   }
 
-  emit(OP_RETURN);
+  emit(static_cast<uint8_t>(OpCode::RETURN));
 
   if (scopeInfo->free.size() == 0) {
     auto fn = ALLOC_FUNCTION(co);
@@ -389,20 +389,20 @@ void EvaCompiler::compileFunction(const Exp &exp, const std::string fnName,
 
     co->addConst(fn);
 
-    emit(OP_CONST);
+    emit(static_cast<uint8_t>(OpCode::CONST));
     emit(co->constants.size() - 1);
   } else {
     co = prevCo;
 
     for (const auto &freeVar : scopeInfo->free) {
-      emit(OP_LOAD_CELL);
+      emit(static_cast<uint8_t>(OpCode::LOAD_CELL));
       emit(prevCo->getCellIndex(freeVar));
     }
 
-    emit(OP_CONST);
+    emit(static_cast<uint8_t>(OpCode::CONST));
     emit(co->constants.size() - 1);
 
-    emit(OP_MAKE_FUNCTION);
+    emit(static_cast<uint8_t>(OpCode::MAKE_FUNCTION));
     emit(scopeInfo->free.size());
   }
 
@@ -413,7 +413,7 @@ void EvaCompiler::blockEnter() { co->scopeLevel++; }
 void EvaCompiler::blockExit() {
   auto varsCount = getVarsCountOnScopeExit();
   if (varsCount > 0 || co->arity > 0) {
-    emit(OP_SCOPE_EXIT);
+    emit(static_cast<uint8_t>(OpCode::SCOPE_EXIT));
 
     if (isFunctionBody()) {
       varsCount += 1 /*Function itself*/ + co->nonCellFnParams ;
