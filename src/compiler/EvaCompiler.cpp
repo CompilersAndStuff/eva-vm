@@ -10,42 +10,27 @@
 #include <set>
 #include <vector>
 
-#define FUNCTION_CALL(exp)                                                     \
-  do {                                                                         \
-    gen(exp.list[0]);                                                          \
-    for (auto i = 1; i < exp.list.size(); i++) {                               \
-      gen(exp.list[i]);                                                        \
-    }                                                                          \
-    emit(static_cast<uint8_t>(OpCode::CALL));                                                             \
-    emit(exp.list.size() - 1);                                                 \
-  } while (false)
+void EvaCompiler::functionCall(const Exp &exp) {
+    gen(exp.list[0]);
+    for (auto i = 1; i < exp.list.size(); i++) {
+      gen(exp.list[i]);
+    }
+    emit(static_cast<uint8_t>(OpCode::CALL));
+    emit(exp.list.size() - 1);
+}
 
-#define ALLOC_CONST(tester, converter, allocator, value)                       \
-  do {                                                                         \
-    for (auto i = 0; i < co->constants.size(); i++) {                          \
-      if (!tester(co->constants[i])) {                                         \
-        continue;                                                              \
-      }                                                                        \
-      if (converter(co->constants[i]) == value) {                              \
-        return i;                                                              \
-      }                                                                        \
-    }                                                                          \
-    co->addConst(allocator(value));                                            \
-  } while (false)
-
-#define GEN_BINARY_OP(op)                                                      \
-  do {                                                                         \
-    gen(exp.list[1]);                                                          \
-    gen(exp.list[2]);                                                          \
-    emit(op);                                                                  \
-  } while (false)
+void EvaCompiler::genBinaryOp(const Exp &exp, uint8_t op) {
+    gen(exp.list[1]);
+    gen(exp.list[2]);
+    emit(op);
+}
 
 EvaCompiler::EvaCompiler(std::shared_ptr<Global> global)
     : global(global), disassembler(std::make_unique<EvaDisassembler>(global)) {}
 
 void EvaCompiler::compile(const Exp &exp) {
-  co = AS_CODE(createCodeObjectValue("main"));
-  main = AS_FUNCTION(ALLOC_FUNCTION(co));
+  co = asCode(createCodeObjectValue("main"));
+  main = asFunction(allocFunction(co));
 
   analyze(exp, nullptr);
 
@@ -161,13 +146,13 @@ void EvaCompiler::gen(const Exp &exp) {
       auto op = tag.string;
 
       if (op == "+") {
-        GEN_BINARY_OP(static_cast<uint8_t>(OpCode::ADD));
+        genBinaryOp(exp, static_cast<uint8_t>(OpCode::ADD));
       } else if (op == "-") {
-        GEN_BINARY_OP(static_cast<uint8_t>(OpCode::SUB));
+        genBinaryOp(exp, static_cast<uint8_t>(OpCode::SUB));
       } else if (op == "*") {
-        GEN_BINARY_OP(static_cast<uint8_t>(OpCode::MUL));
+        genBinaryOp(exp, static_cast<uint8_t>(OpCode::MUL));
       } else if (op == "/") {
-        GEN_BINARY_OP(static_cast<uint8_t>(OpCode::DIV));
+        genBinaryOp(exp, static_cast<uint8_t>(OpCode::DIV));
       } else if (compareOps_.count(op) != 0) {
         gen(exp.list[1]);
         gen(exp.list[2]);
@@ -310,10 +295,10 @@ void EvaCompiler::gen(const Exp &exp) {
         compileFunction(exp, "lambda", exp.list[1], exp.list[2]);
 
       } else {
-        FUNCTION_CALL(exp);
+        functionCall(exp);
       }
     } else {
-      FUNCTION_CALL(exp);
+      functionCall(exp);
     }
   }
 }
@@ -328,8 +313,8 @@ FunctionObject *EvaCompiler::getMainFunction() { return main; }
 
 EvaValue EvaCompiler::createCodeObjectValue(const std::string &name,
                                             size_t arity) {
-  auto coValue = ALLOC_CODE(name, arity);
-  auto co = AS_CODE(coValue);
+  auto coValue = allocCode(name, arity);
+  auto co = asCode(coValue);
   codeObjects_.push_back(co);
   return coValue;
 }
@@ -343,7 +328,7 @@ void EvaCompiler::compileFunction(const Exp &exp, const std::string fnName,
   auto arity = params.list.size();
   auto prevCo = co;
   auto coValue = createCodeObjectValue(fnName, arity);
-  co = AS_CODE(coValue);
+  co = asCode(coValue);
 
   co->freeCount = scopeInfo->free.size();
 
@@ -382,7 +367,7 @@ void EvaCompiler::compileFunction(const Exp &exp, const std::string fnName,
   emit(static_cast<uint8_t>(OpCode::RETURN));
 
   if (scopeInfo->free.size() == 0) {
-    auto fn = ALLOC_FUNCTION(co);
+    auto fn = allocFunction(co);
 
     co = prevCo;
 
@@ -470,18 +455,15 @@ size_t EvaCompiler::getVarsCountOnScopeExit() {
 size_t EvaCompiler::getOffset() { return co->code.size(); }
 
 size_t EvaCompiler::numericConstIdx(double value) {
-  ALLOC_CONST(IS_NUMBER, AS_NUMBER, NUMBER, value);
-  return co->constants.size() - 1;
+  return allocConst(isNumber, asNumber, makeNumber, value);
 }
 
 size_t EvaCompiler::stringConstIdx(const std::string &value) {
-  ALLOC_CONST(IS_STRING, AS_CPPSTRING, ALLOC_STRING, value);
-  return co->constants.size() - 1;
+  return allocConst(isString, asCppString, allocString, value);
 }
 
 size_t EvaCompiler::booleanConstIdx(bool value) {
-  ALLOC_CONST(IS_BOOLEAN, AS_BOOLEAN, BOOLEAN, value);
-  return co->constants.size() - 1;
+  return allocConst(isBoolean, asBoolean, makeBoolean, value);
 }
 
 void EvaCompiler::emit(uint8_t code) { co->code.push_back(code); }

@@ -9,7 +9,7 @@ void Global::define(const std::string &name) {
     return;
   }
 
-  globals.push_back({name, NUMBER(0)});
+  globals.push_back({name, makeNumber(0)});
 }
 
 GlobalVar &Global::get(size_t index) { return globals[index]; }
@@ -27,7 +27,7 @@ void Global::addNativeFunction(const std::string &name,
     return;
   }
 
-  globals.push_back({name, ALLOC_NATIVE(fn, name, arity)});
+  globals.push_back({name, allocNative(fn, name, arity)});
 }
 
 void Global::addConst(const std::string &name, double value) {
@@ -35,7 +35,7 @@ void Global::addConst(const std::string &name, double value) {
     return;
   }
 
-  globals.push_back({name, NUMBER(value)});
+  globals.push_back({name, makeNumber(value)});
 }
 
 int Global::getGlobalIndex(const std::string &name) {

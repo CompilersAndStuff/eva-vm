@@ -15,44 +15,35 @@
 
 using syntax::EvaParser;
 
-#define READ_BYTE() *ip++
-#define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
-#define TO_ADDRESS(index) &fn->co->code[index]
-#define STACK_LIMIT 512
-#define GET_CONST() fn->co->constants[READ_BYTE()]
+uint8_t EvaVm::readByte() {
+  return *ip++;
+}
+
+uint16_t EvaVm::readShort() {
+  ip += 2;
+  return (((uint16_t)ip[-2]) << 8) | ip[-1];
+}
+
+uint8_t *EvaVm::toAddress(size_t index) {
+  return &fn->co->code[index];
+}
+
+EvaValue &EvaVm::getConst() {
+  return fn->co->constants[readByte()];
+}
 
 #define BINARY_OP(op)                                                          \
   do {                                                                         \
-    auto op2 = AS_NUMBER(pop());                                               \
-    auto op1 = AS_NUMBER(pop());                                               \
-    push(NUMBER(op1 op op2));                                                  \
+    auto op2 = asNumber(pop());                                               \
+    auto op1 = asNumber(pop());                                               \
+    push(makeNumber(op1 op op2));                                                  \
   } while (false)
 
-#define COMPARE_VALUES(op, v1, v2)                                             \
-  do {                                                                         \
-    bool res;                                                                  \
-    switch (op) {                                                              \
-    case 0:                                                                    \
-      res = v1 < v2;                                                           \
-      break;                                                                   \
-    case 1:                                                                    \
-      res = v1 > v2;                                                           \
-      break;                                                                   \
-    case 2:                                                                    \
-      res = v1 == v2;                                                          \
-      break;                                                                   \
-    case 3:                                                                    \
-      res = v1 >= v2;                                                          \
-      break;                                                                   \
-    case 4:                                                                    \
-      res = v1 <= v2;                                                          \
-      break;                                                                   \
-    case 5:                                                                    \
-      res = v1 != v2;                                                          \
-      break;                                                                   \
-    }                                                                          \
-    push(BOOLEAN(res));                                                        \
-  } while (false)
+void EvaVm::binaryOp(double (*op)(double, double)) {
+    auto op2 = asNumber(pop());
+    auto op1 = asNumber(pop());
+    push(makeNumber(op(op1, op2)));
+}
 
 EvaVm::EvaVm()
     : global(std::make_unique<Global>()),
@@ -113,86 +104,86 @@ EvaValue EvaVm::exec(const std::string &program) {
 EvaValue EvaVm::eval() {
   for (;;) {
     /*dumpStack();*/
-    auto opcode = READ_BYTE();
+    auto opcode = readByte();
     switch (static_cast<OpCode>(opcode)) {
     case OpCode::HALT:
       return pop();
 
     case OpCode::CONST:
-      push(GET_CONST());
+      push(getConst());
       break;
 
     case OpCode::ADD: {
       auto op2 = pop();
       auto op1 = pop();
 
-      if (IS_NUMBER(op1) && IS_NUMBER(op2)) {
-        auto v1 = AS_NUMBER(op1);
-        auto v2 = AS_NUMBER(op2);
-        push(NUMBER(v1 + v2));
+      if (isNumber(op1) && isNumber(op2)) {
+        auto v1 = asNumber(op1);
+        auto v2 = asNumber(op2);
+        push(makeNumber(v1 + v2));
       }
 
-      else if (IS_STRING(op1) && IS_STRING(op2)) {
-        auto v1 = AS_CPPSTRING(op1);
-        auto v2 = AS_CPPSTRING(op2);
-        push(ALLOC_STRING(v1 + v2));
+      else if (isString(op1) && isString(op2)) {
+        auto v1 = asCppString(op1);
+        auto v2 = asCppString(op2);
+        push(allocString(v1 + v2));
       }
 
       break;
     }
 
     case OpCode::SUB:
-      BINARY_OP(-);
+      binaryOp([](auto a, auto b) {return a - b;});
       break;
 
     case OpCode::MUL:
-      BINARY_OP(*);
+      binaryOp([](auto a, auto b) {return a * b;});
       break;
 
     case OpCode::DIV:
-      BINARY_OP(/);
+      binaryOp([](auto a, auto b) {return a / b;});
       break;
 
     case OpCode::COMPARE: {
-      auto op = READ_BYTE();
+      auto op = readByte();
       auto op2 = pop();
       auto op1 = pop();
 
-      if (IS_NUMBER(op1) && IS_NUMBER(op2)) {
-        auto v1 = AS_NUMBER(op1);
-        auto v2 = AS_NUMBER(op2);
-        COMPARE_VALUES(op, v1, v2);
-      } else if (IS_STRING(op1) && IS_STRING(op2)) {
-        auto v1 = AS_CPPSTRING(op1);
-        auto v2 = AS_CPPSTRING(op2);
-        COMPARE_VALUES(op, v1, v2);
+      if (isNumber(op1) && isNumber(op2)) {
+        auto v1 = asNumber(op1);
+        auto v2 = asNumber(op2);
+        compareValues(op, v1, v2);
+      } else if (isString(op1) && isString(op2)) {
+        auto v1 = asCppString(op1);
+        auto v2 = asCppString(op2);
+        compareValues(op, v1, v2);
       }
       break;
     }
     case OpCode::JMP_IF_FALSE: {
-      auto cond = AS_BOOLEAN(pop());
-      auto address = READ_SHORT();
+      auto cond = asBoolean(pop());
+      auto address = readShort();
 
       if (!cond) {
-        ip = TO_ADDRESS(address);
+        ip = toAddress(address);
       }
 
       break;
     }
 
     case OpCode::JMP: {
-      ip = TO_ADDRESS(READ_SHORT());
+      ip = toAddress(readShort());
       break;
     }
 
     case OpCode::GET_GLOBAL: {
-      auto globalIndex = READ_BYTE();
+      auto globalIndex = readByte();
       push(global->get(globalIndex).value);
       break;
     }
 
     case OpCode::SET_GLOBAL: {
-      auto globalIndex = READ_BYTE();
+      auto globalIndex = readByte();
       auto value = pop();
       global->set(globalIndex, value);
       break;
@@ -204,7 +195,7 @@ EvaValue EvaVm::eval() {
     }
 
     case OpCode::GET_LOCAL: {
-      auto localIndex = READ_BYTE();
+      auto localIndex = readByte();
       if (localIndex < 0 || localIndex >= stack.size()) {
         DIE << "OP_GET_LOCAL: invalid variable index: " << (int)localIndex;
       }
@@ -213,7 +204,7 @@ EvaValue EvaVm::eval() {
     }
 
     case OpCode::SET_LOCAL: {
-      auto localIndex = READ_BYTE();
+      auto localIndex = readByte();
       auto value = peek(0);
       if (localIndex < 0 || localIndex >= stack.size()) {
         DIE << "OP_SET_LOCAL: invalid variable index: " << (int)localIndex;
@@ -223,7 +214,7 @@ EvaValue EvaVm::eval() {
     }
 
     case OpCode::SCOPE_EXIT: {
-      auto count = READ_BYTE();
+      auto count = readByte();
 
       *(sp - 1 - count) = peek(0);
 
@@ -232,11 +223,11 @@ EvaValue EvaVm::eval() {
     }
 
     case OpCode::CALL: {
-      auto argsCount = READ_BYTE();
+      auto argsCount = readByte();
       auto fnValue = peek(argsCount);
 
-      if (IS_NATIVE(fnValue)) {
-        AS_NATIVE(fnValue)->function();
+      if (isNative(fnValue)) {
+        asNative(fnValue)->function();
         auto result = pop();
 
         popN(argsCount + 1);
@@ -246,7 +237,7 @@ EvaValue EvaVm::eval() {
         break;
       }
 
-      auto callee = AS_FUNCTION(fnValue);
+      auto callee = asFunction(fnValue);
 
       callStack.push(Frame{ip, bp, fn});
 
@@ -269,16 +260,16 @@ EvaValue EvaVm::eval() {
     }
 
     case OpCode::GET_CELL: {
-      auto cellIndex = READ_BYTE();
+      auto cellIndex = readByte();
       push(fn->cells[cellIndex]->value);
       break;
     }
 
     case OpCode::SET_CELL: {
-      auto cellIndex = READ_BYTE();
+      auto cellIndex = readByte();
       auto value = peek(cellIndex);
       if (fn->cells.size() <= cellIndex) {
-        fn->cells.push_back(AS_CELL(ALLOC_CELL(value)));
+        fn->cells.push_back(asCell(allocCell(value)));
       } else {
         fn->cells[cellIndex]->value = value;
       }
@@ -286,19 +277,19 @@ EvaValue EvaVm::eval() {
     }
 
     case OpCode::LOAD_CELL: {
-      auto cellIndex = READ_BYTE();
-      push(CELL(fn->cells[cellIndex]));
+      auto cellIndex = readByte();
+      push(cell(fn->cells[cellIndex]));
       break;
     }
 
     case OpCode::MAKE_FUNCTION: {
-      auto co = AS_CODE(pop());
-      auto cellsCount = READ_BYTE();
-      auto fnValue = ALLOC_FUNCTION(co);
-      auto fn = AS_FUNCTION(fnValue);
+      auto co = asCode(pop());
+      auto cellsCount = readByte();
+      auto fnValue = allocFunction(co);
+      auto fn = asFunction(fnValue);
 
       for (auto i = 0; i < cellsCount; i++) {
-        fn->cells.push_back(AS_CELL(pop()));
+        fn->cells.push_back(asCell(pop()));
       }
       push(fnValue);
       break;
@@ -315,8 +306,8 @@ void EvaVm::setGlobalVariables() {
   global->addNativeFunction(
       "native-square",
       [&]() {
-        auto x = AS_NUMBER(peek(0));
-        push(NUMBER(x * x));
+        auto x = asNumber(peek(0));
+        push(makeNumber(x * x));
       },
       1);
 

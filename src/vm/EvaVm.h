@@ -9,44 +9,7 @@
 #include <memory>
 #include <string>
 
-#define READ_BYTE() *ip++
-#define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
-#define TO_ADDRESS(index) &fn->co->code[index]
-#define STACK_LIMIT 512
-#define GET_CONST() fn->co->constants[READ_BYTE()]
-
-#define BINARY_OP(op)                                                          \
-  do {                                                                         \
-    auto op2 = AS_NUMBER(pop());                                               \
-    auto op1 = AS_NUMBER(pop());                                               \
-    push(NUMBER(op1 op op2));                                                  \
-  } while (false)
-
-#define COMPARE_VALUES(op, v1, v2)                                             \
-  do {                                                                         \
-    bool res;                                                                  \
-    switch (op) {                                                              \
-    case 0:                                                                    \
-      res = v1 < v2;                                                           \
-      break;                                                                   \
-    case 1:                                                                    \
-      res = v1 > v2;                                                           \
-      break;                                                                   \
-    case 2:                                                                    \
-      res = v1 == v2;                                                          \
-      break;                                                                   \
-    case 3:                                                                    \
-      res = v1 >= v2;                                                          \
-      break;                                                                   \
-    case 4:                                                                    \
-      res = v1 <= v2;                                                          \
-      break;                                                                   \
-    case 5:                                                                    \
-      res = v1 != v2;                                                          \
-      break;                                                                   \
-    }                                                                          \
-    push(BOOLEAN(res));                                                        \
-  } while (false)
+constexpr size_t STACK_LIMIT = 512;
 
 struct Frame {
   uint8_t *ra;
@@ -55,6 +18,39 @@ struct Frame {
 };
 
 class EvaVm {
+  uint8_t readByte();
+  uint16_t readShort();
+  uint8_t *toAddress(size_t index);
+  EvaValue &getConst();
+
+  void binaryOp(double (*op)(double, double));
+
+  template <typename T>
+  void compareValues(uint8_t &op, T v1, T v2) {
+    bool res;
+    switch (op) {
+    case 0:
+      res = v1 < v2;
+      break;
+    case 1:
+      res = v1 > v2;
+      break;
+    case 2:
+      res = v1 == v2;
+      break;
+    case 3:
+      res = v1 >= v2;
+      break;
+    case 4:
+      res = v1 <= v2;
+      break;
+    case 5:
+      res = v1 != v2;
+      break;
+    }
+    push(makeBoolean(res));
+  }
+
 public:
   EvaVm();
 
