@@ -4,6 +4,7 @@ project(EvaVm VERSION 0.1.0 LANGUAGES C CXX)
 add_executable(EvaVm
     src/eva-vm.cpp
     src/Logger.cpp
+    src/parser/Expression.cpp
     src/vm/EvaValue.cpp
     src/vm/EvaVm.cpp
     src/vm/Global.cpp

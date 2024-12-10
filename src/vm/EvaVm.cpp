@@ -55,7 +55,7 @@ using syntax::EvaParser;
   } while (false)
 
 EvaVm::EvaVm()
-    : parser(std::make_unique<EvaParser>()), global(std::make_unique<Global>()),
+    : global(std::make_unique<Global>()),
       compiler(std::make_unique<EvaCompiler>(global)) {
   setGlobalVariables();
 }
@@ -93,7 +93,7 @@ void EvaVm::popN(size_t count) {
 }
 
 EvaValue EvaVm::exec(const std::string &program) {
-  auto ast = parser->parse("(begin" + program + ")");
+  auto ast = EvaParser().parse("(begin" + program + ")");
 
   compiler->compile(ast);
 

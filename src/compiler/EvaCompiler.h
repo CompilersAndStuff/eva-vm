@@ -2,13 +2,14 @@
 #define __EvaCompiler_h
 
 #include "../disassembler/EvaDisassembler.h"
-#include "../parser/EvaParser.h"
 #include "../vm/EvaValue.h"
 #include "../vm/Global.h"
+#include "../parser/Expression.h"
 #include "Scope.h"
 #include <cstdint>
 #include <memory>
 #include <set>
+#include <stack>
 #include <vector>
 
 class EvaCompiler {
