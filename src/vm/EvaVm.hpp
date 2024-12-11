@@ -4,6 +4,7 @@
 #include "../Logger.hpp"
 #include "../bytecode/OpCode.hpp"
 #include "../compiler/EvaCompiler.hpp"
+#include "../gc/EvaCollector.hpp"
 #include "../parser/EvaParser.hpp"
 #include "EvaValue.hpp"
 #include "Global.hpp"
@@ -21,7 +22,9 @@ using syntax::EvaParser;
 #define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
 #define TO_ADDRESS(index) &fn->co->code[index]
 #define STACK_LIMIT 512
+#define GC_TRESHOLD 417
 #define GET_CONST() fn->co->constants[READ_BYTE()]
+#define MEM(allocator, ...) (maybeGC(), allocator(__VA_ARGS__))
 
 #define BINARY_OP(op)                                                          \
   do {                                                                         \
@@ -67,9 +70,12 @@ public:
   EvaVm()
       : parser(std::make_unique<EvaParser>()),
         global(std::make_unique<Global>()),
-        compiler(std::make_unique<EvaCompiler>(global)) {
+        compiler(std::make_unique<EvaCompiler>(global)),
+        collector(std::make_unique<EvaCollector>()) {
     setGlobalVariables();
   }
+
+  ~EvaVm() { Traceable::cleanup(); }
 
   void push(const EvaValue &value) {
     if ((size_t)(sp - stack.begin()) == STACK_LIMIT) {
@@ -101,6 +107,64 @@ public:
     }
 
     sp -= count;
+  }
+
+  std::set<Traceable *> getGCRoots() {
+    auto roots = getStackGCRoots();
+
+    auto constantRoots = getConstantGCRoots();
+    roots.insert(constantRoots.begin(), constantRoots.end());
+
+    auto globalRoots = getGlobalGCRoots();
+    roots.insert(globalRoots.begin(), globalRoots.end());
+
+    return roots;
+  }
+
+  std::set<Traceable *> getStackGCRoots() {
+    std::set<Traceable *> roots;
+    auto stackEntry = sp;
+    while (stackEntry-- != stack.begin()) {
+      if (IS_OBJECT(*stackEntry)) {
+        roots.insert((Traceable *)stackEntry->object);
+      }
+    }
+
+    return roots;
+  }
+
+  std::set<Traceable *> getConstantGCRoots() {
+    return compiler->getConstantObjects();
+  }
+
+  std::set<Traceable *> getGlobalGCRoots() {
+    std::set<Traceable *> roots;
+
+    for (const auto &global : global->globals) {
+      if (IS_OBJECT(global.value)) {
+        roots.insert((Traceable *)global.value.object);
+      }
+    }
+
+    return roots;
+  }
+
+  void maybeGC() {
+    if (Traceable::bytesAllocated < GC_TRESHOLD) {
+      return;
+    }
+
+    auto roots = getGCRoots();
+
+    if (roots.size() == 0) {
+      return;
+    }
+
+    std::cout << "---------- BEFORE GC STATS ----------\n";
+    Traceable::printStats();
+    collector->gc(roots);
+    std::cout << "---------- AFTER GC STATS ----------\n";
+    Traceable::printStats();
   }
 
   EvaValue exec(const std::string &program) {
@@ -146,7 +210,7 @@ public:
         else if (IS_STRING(op1) && IS_STRING(op2)) {
           auto v1 = AS_CPPSTRING(op1);
           auto v2 = AS_CPPSTRING(op2);
-          push(ALLOC_STRING(v1 + v2));
+          push(MEM(ALLOC_STRING, v1 + v2));
         }
 
         break;
@@ -289,7 +353,7 @@ public:
         auto cellIndex = READ_BYTE();
         auto value = peek(0);
         if (fn->cells.size() <= cellIndex) {
-          fn->cells.push_back(AS_CELL(ALLOC_CELL(value)));
+          fn->cells.push_back(AS_CELL(MEM(ALLOC_CELL, value)));
         } else {
           fn->cells[cellIndex]->value = value;
         }
@@ -305,7 +369,7 @@ public:
       case OP_MAKE_FUNCTION: {
         auto co = AS_CODE(pop());
         auto cellsCount = READ_BYTE();
-        auto fnValue = ALLOC_FUNCTION(co);
+        auto fnValue = MEM(ALLOC_FUNCTION, co);
         auto fn = AS_FUNCTION(fnValue);
 
         for (auto i = 0; i < cellsCount; i++) {
@@ -339,6 +403,8 @@ public:
   std::shared_ptr<Global> global;
 
   std::unique_ptr<EvaCompiler> compiler;
+
+  std::unique_ptr<EvaCollector> collector;
 
   uint8_t *ip;
 

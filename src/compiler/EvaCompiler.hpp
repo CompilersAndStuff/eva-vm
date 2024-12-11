@@ -50,7 +50,9 @@ public:
 
   void compile(const Exp &exp) {
     co = AS_CODE(createCodeObjectValue("main"));
+    constantObjects_.insert((Traceable *)co);
     main = AS_FUNCTION(ALLOC_FUNCTION(co));
+    constantObjects_.insert((Traceable *)main);
 
     analyze(exp, nullptr);
 
@@ -331,6 +333,8 @@ public:
 
   FunctionObject *getMainFunction() { return main; }
 
+  std::set<Traceable *> &getConstantObjects() { return constantObjects_; }
+
 private:
   std::shared_ptr<Global> global;
   std::unique_ptr<EvaDisassembler> disassembler;
@@ -339,6 +343,7 @@ private:
     auto coValue = ALLOC_CODE(name, arity);
     auto co = AS_CODE(coValue);
     codeObjects_.push_back(co);
+    constantObjects_.insert((Traceable *)co);
     return coValue;
   }
 
@@ -391,6 +396,7 @@ private:
 
     if (scopeInfo->free.size() == 0) {
       auto fn = ALLOC_FUNCTION(co);
+      constantObjects_.insert((Traceable *)AS_OBJECT(fn));
 
       co = prevCo;
 
@@ -423,7 +429,7 @@ private:
       emit(OP_SCOPE_EXIT);
 
       if (isFunctionBody()) {
-        varsCount += 1 /*Function itself*/ + co->nonCellFnParams ;
+        varsCount += 1 /*Function itself*/ + co->nonCellFnParams;
       }
 
       emit(varsCount);
@@ -474,6 +480,7 @@ private:
 
   size_t stringConstIdx(const std::string &value) {
     ALLOC_CONST(IS_STRING, AS_CPPSTRING, ALLOC_STRING, value);
+    constantObjects_.insert((Traceable*)co->constants.back().object);
     return co->constants.size() - 1;
   }
 
@@ -502,6 +509,8 @@ private:
   FunctionObject *main;
 
   std::vector<CodeObject *> codeObjects_;
+
+  std::set<Traceable *> constantObjects_;
 
   static std::map<std::string, uint8_t> compareOps_;
 
