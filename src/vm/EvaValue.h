@@ -117,52 +117,48 @@ struct FunctionObject : public Object {
   std::vector<CellObject *> cells;
 };
 
-#define NUMBER(value) ((EvaValue){EvaValueType::NUMBER, .number = value})
-#define BOOLEAN(value) ((EvaValue){EvaValueType::BOOLEAN, .boolean = value})
-#define OBJECT(value) ((EvaValue){EvaValueType::OBJECT, .object = value})
+EvaValue makeNumber(double value);
 
-#define ALLOC_STRING(value)                                                    \
-  ((EvaValue){EvaValueType::OBJECT,                                            \
-              .object = (Object *)new StringObject(value)})
-#define ALLOC_CODE(name, arity)                                                \
-  ((EvaValue){EvaValueType::OBJECT,                                            \
-              .object = (Object *)new CodeObject(name, arity)})
-#define ALLOC_NATIVE(fn, name, arity)                                          \
-  ((EvaValue){EvaValueType::OBJECT,                                            \
-              .object = (Object *)new NativeObject(fn, name, arity)})
-#define ALLOC_FUNCTION(co)                                                     \
-  ((EvaValue){EvaValueType::OBJECT, .object = (Object *)new FunctionObject(co)})
+EvaValue makeBoolean(bool value);
 
-#define ALLOC_CELL(co)                                                         \
-  ((EvaValue){EvaValueType::OBJECT, .object = (Object *)new CellObject(co)})
+EvaValue makeObject(Object *value);
 
-#define CELL(cellObject) OBJECT((Object *)cellObject)
+EvaValue allocString(std::string s);
 
-#define AS_NUMBER(evaValue) ((double)(evaValue).number)
-#define AS_BOOLEAN(evaValue) ((bool)(evaValue).boolean)
-#define AS_STRING(evaValue) ((StringObject *)(evaValue).object)
-#define AS_CPPSTRING(evaValue) (AS_STRING(evaValue)->string)
-#define AS_OBJECT(evaValue) ((Object *)(evaValue).object)
-#define AS_CODE(evaValue) ((CodeObject *)(evaValue).object)
-#define AS_NATIVE(evaValue) ((NativeObject *)(evaValue).object)
-#define AS_FUNCTION(evaValue) ((FunctionObject *)(evaValue).object)
-#define AS_CELL(evaValue) ((CellObject *)(evaValue).object)
+EvaValue allocCode(const std::string &name, size_t arity);
 
-#define IS_NUMBER(evaValue) ((evaValue).type == EvaValueType::NUMBER)
-#define IS_BOOLEAN(evaValue) ((evaValue).type == EvaValueType::BOOLEAN)
-#define IS_OBJECT(evaValue) ((evaValue).type == EvaValueType::OBJECT)
-#define IS_OBJECT_TYPE(evaValue, objectType)                                   \
-  (IS_OBJECT(evaValue) && AS_OBJECT(evaValue)->type == objectType)
-#define IS_STRING(evaValue) IS_OBJECT_TYPE(evaValue, ObjectType::STRING)
-#define IS_CODE(evaValue) IS_OBJECT_TYPE(evaValue, ObjectType::CODE)
-#define IS_NATIVE(evaValue) IS_OBJECT_TYPE(evaValue, ObjectType::NATIVE)
-#define IS_FUNCTION(evaValue) IS_OBJECT_TYPE(evaValue, ObjectType::FUNCTION)
-#define IS_CELL(evaValue) IS_OBJECT_TYPE(evaValue, ObjectType::CELL)
+EvaValue allocNative(NativeFn fn, const std::string &name, size_t arity);
+
+EvaValue allocFunction(CodeObject *co);
+
+EvaValue allocCell(EvaValue co);
+
+EvaValue cell(CellObject *cellObject);
 
 std::string evaValueToTypeString(const EvaValue &evaValue);
 
 std::string evaValueToConstantString(const EvaValue &evaValue);
 
 std::ostream &operator<<(std::ostream &os, const EvaValue &evaValue);
+
+double asNumber(const EvaValue &evaValue);
+bool asBoolean(const EvaValue &evaValue);
+StringObject *asString(const EvaValue &evaValue);
+std::string asCppString(const EvaValue &evaValue);
+Object *asObject(const EvaValue &evaValue);
+CodeObject *asCode(const EvaValue &evaValue);
+NativeObject *asNative(const EvaValue &evaValue);
+FunctionObject *asFunction(const EvaValue &evaValue);
+CellObject *asCell(const EvaValue &evaValue);
+
+bool isNumber(const EvaValue &evaValue);
+bool isBoolean(const EvaValue &evaValue);
+bool isObject(const EvaValue &evaValue);
+bool isObjectType(const EvaValue &evaValue, ObjectType objectType);
+bool isString(const EvaValue &evaValue);
+bool isCode(const EvaValue &evaValue);
+bool isNative(const EvaValue &evaValue);
+bool isFunction(const EvaValue &evaValue);
+bool isCell(const EvaValue &evaValue);
 
 #endif // !__EvaValue_h

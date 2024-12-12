@@ -88,19 +88,19 @@ FunctionObject::FunctionObject(CodeObject *co)
     : Object(ObjectType::FUNCTION), co(co) {}
 
 std::string evaValueToTypeString(const EvaValue &evaValue) {
-  if (IS_NUMBER(evaValue)) {
+  if (isNumber(evaValue)) {
     return "NUMBER";
-  } else if (IS_BOOLEAN(evaValue)) {
+  } else if (isBoolean(evaValue)) {
     return "BOOLEAN";
-  } else if (IS_STRING(evaValue)) {
+  } else if (isString(evaValue)) {
     return "STRING";
-  } else if (IS_CODE(evaValue)) {
+  } else if (isCode(evaValue)) {
     return "CODE";
-  } else if (IS_NATIVE(evaValue)) {
+  } else if (isNative(evaValue)) {
     return "NATIVE";
-  } else if (IS_FUNCTION(evaValue)) {
+  } else if (isFunction(evaValue)) {
     return "FUNCTION";
-  } else if (IS_CELL(evaValue)) {
+  } else if (isCell(evaValue)) {
     return "CELL";
   } else {
     DIE << "evaValueToTypeString: unknown type " << (int)evaValue.type;
@@ -111,23 +111,23 @@ std::string evaValueToTypeString(const EvaValue &evaValue) {
 std::string evaValueToConstantString(const EvaValue &evaValue) {
   std::stringstream ss;
 
-  if (IS_NUMBER(evaValue)) {
-    ss << AS_NUMBER(evaValue);
-  } else if (IS_BOOLEAN(evaValue)) {
-    ss << ((AS_BOOLEAN(evaValue) == true) ? "true" : "false");
-  } else if (IS_STRING(evaValue)) {
-    ss << AS_CPPSTRING(evaValue);
-  } else if (IS_CODE(evaValue)) {
-    auto code = AS_CODE(evaValue);
+  if (isNumber(evaValue)) {
+    ss << asNumber(evaValue);
+  } else if (isBoolean(evaValue)) {
+    ss << (asBoolean(evaValue) ? "true" : "false");
+  } else if (isString(evaValue)) {
+    ss << asCppString(evaValue);
+  } else if (isCode(evaValue)) {
+    auto code = asCode(evaValue);
     ss << "code" << code << ": " << code->name << "/" << code->arity;
-  } else if (IS_FUNCTION(evaValue)) {
-    auto fn = AS_FUNCTION(evaValue);
+  } else if (isFunction(evaValue)) {
+    auto fn = asFunction(evaValue);
     ss << fn->co->name << "/" << fn->co->arity;
-  } else if (IS_NATIVE(evaValue)) {
-    auto fn = AS_NATIVE(evaValue);
+  } else if (isNative(evaValue)) {
+    auto fn = asNative(evaValue);
     ss << fn->name << "/" << fn->arity;
-  } else if (IS_CELL(evaValue)) {
-    auto cell = AS_CELL(evaValue);
+  } else if (isCell(evaValue)) {
+    auto cell = asCell(evaValue);
     ss << "cell: " << evaValueToConstantString(cell->value);
   } else {
     DIE << "evaValueToConstantString: unknown type " << (int)evaValue.type;
@@ -138,4 +138,113 @@ std::string evaValueToConstantString(const EvaValue &evaValue) {
 std::ostream &operator<<(std::ostream &os, const EvaValue &evaValue) {
   return os << "EvaValue (" << evaValueToTypeString(evaValue)
             << "): " << evaValueToConstantString(evaValue);
+}
+
+EvaValue makeNumber(double value) {
+  return {.type = EvaValueType::NUMBER, .number = value};
+}
+
+EvaValue makeBoolean(bool value) {
+  return {.type = EvaValueType::BOOLEAN, .boolean = value};
+}
+
+EvaValue makeObject(Object *value) {
+  return {.type = EvaValueType::OBJECT, .object = value};
+}
+
+EvaValue allocString(std::string value) {
+  return {
+    .type = EvaValueType::OBJECT,
+    .object = (Object *)new StringObject(value)
+  };
+}
+
+EvaValue allocCode(const std::string &name, size_t arity) {
+  return {
+    .type = EvaValueType::OBJECT,
+    .object = (Object *)new CodeObject(name, arity)
+  };
+}
+
+EvaValue allocNative(NativeFn fn, const std::string &name, size_t arity) {
+  return {
+    .type = EvaValueType::OBJECT,
+    .object = (Object *)new NativeObject(fn, name, arity)
+  };
+}
+
+EvaValue allocFunction(CodeObject *co) {
+  return {.type = EvaValueType::OBJECT, .object = (Object *)new FunctionObject(co)};
+}
+
+EvaValue allocCell(EvaValue co) {
+  return {.type = EvaValueType::OBJECT, .object = (Object *)new CellObject(co)};
+}
+
+EvaValue cell(CellObject *cellObject) {
+  return makeObject((Object *)cellObject);
+}
+
+double asNumber(const EvaValue &evaValue) {
+  return evaValue.number;
+}
+
+bool asBoolean(const EvaValue &evaValue) {
+  return evaValue.boolean;
+}
+
+StringObject *asString(const EvaValue &evaValue) {
+  return (StringObject *)evaValue.object;
+}
+
+std::string asCppString(const EvaValue &evaValue) {
+  return asString(evaValue)->string;
+}
+
+Object *asObject(const EvaValue &evaValue) {
+  return evaValue.object;
+}
+
+CodeObject *asCode(const EvaValue &evaValue) {
+  return (CodeObject*)evaValue.object;
+}
+
+NativeObject *asNative(const EvaValue &evaValue) {
+  return (NativeObject*)evaValue.object;
+}
+
+FunctionObject *asFunction(const EvaValue &evaValue) {
+  return (FunctionObject*)evaValue.object;
+}
+CellObject *asCell(const EvaValue &evaValue) {
+  return (CellObject*)evaValue.object;
+}
+
+bool isNumber(const EvaValue &evaValue) {
+  return evaValue.type == EvaValueType::NUMBER;
+}
+bool isBoolean(const EvaValue &evaValue) {
+  return evaValue.type == EvaValueType::BOOLEAN;
+}
+bool isObject(const EvaValue &evaValue) {
+  return evaValue.type == EvaValueType::OBJECT;
+}
+bool isObjectType(const EvaValue &evaValue, ObjectType objectType) {
+  return isObject(evaValue) && asObject(evaValue)->type == objectType;
+}
+
+bool isString(const EvaValue &evaValue) {
+  return isObjectType(evaValue, ObjectType::STRING);
+}
+bool isCode(const EvaValue &evaValue) {
+  return isObjectType(evaValue, ObjectType::CODE);
+}
+bool isNative(const EvaValue &evaValue) {
+  return isObjectType(evaValue, ObjectType::NATIVE);
+}
+bool isFunction(const EvaValue &evaValue) {
+  return isObjectType(evaValue, ObjectType::FUNCTION);
+}
+bool isCell(const EvaValue &evaValue) {
+  return isObjectType(evaValue, ObjectType::CELL);
 }

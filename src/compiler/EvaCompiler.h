@@ -87,6 +87,23 @@ private:
   static std::map<std::string, uint8_t> compareOps_;
 
   static std::set<std::string> keywords;
+
+  void genBinaryOp(const Exp &exp, uint8_t op);
+  void functionCall(const Exp &exp);
+
+  template <typename T>
+  size_t allocConst(bool (*tester)(const EvaValue&), T (*converter)(const EvaValue &), EvaValue (*allocator)(T), const T &value) {
+    for (auto i = 0; i < co->constants.size(); i++) {
+      if (!tester(co->constants[i])) {
+        continue;
+      }
+      if (converter(co->constants[i]) == value) {
+        return i;
+      }
+    }
+    co->addConst(allocator(value));
+    return co->constants.size() - 1;
+  }
 };
 
 #endif // __EvaCompiler_h

@@ -26,10 +26,10 @@ void EvaCollector::mark(const std::set<Traceable *> &roots) {
 std::set<Traceable *> EvaCollector::getPointers(const Traceable *object) {
   std::set<Traceable *> pointers;
 
-  auto evaValue = OBJECT((Object *)object);
+  auto evaValue = makeObject((Object *)object);
 
-  if (IS_FUNCTION(evaValue)) {
-    auto fn = AS_FUNCTION(evaValue);
+  if (isFunction(evaValue)) {
+    auto fn = asFunction(evaValue);
     for (auto &cell : fn->cells) {
       pointers.insert((Traceable *)cell);
     }
