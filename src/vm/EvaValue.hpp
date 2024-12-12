@@ -4,6 +4,8 @@
 #include "../Logger.hpp"
 #include <iostream>
 #include <list>
+#include <cstdint>
+#include <functional>
 #include <sstream>
 #include <string>
 #include <vector>
