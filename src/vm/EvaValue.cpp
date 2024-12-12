@@ -13,13 +13,14 @@ void *Traceable::operator new(size_t size) {
   return object;
 }
 
-void Traceable::operator delete(void *object, std::size_t sz) {
+void Traceable::operator delete(void *object) {
+  size_t sz = ((Traceable *)object)->size;
   Traceable::bytesAllocated -= ((Traceable *)object)->size;
   ::operator delete(object, sz);
 }
 
 void Traceable::cleanup() {
-  for (auto &object : objects) {
+  for (auto object : objects) {
     delete object;
   }
   objects.clear();

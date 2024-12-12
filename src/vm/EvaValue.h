@@ -29,7 +29,7 @@ struct Traceable {
 
   static void *operator new(size_t size);
 
-  static void operator delete(void *object, std::size_t sz);
+  static void operator delete(void *object);
 
   static void cleanup();
 
