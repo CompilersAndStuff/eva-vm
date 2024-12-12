@@ -29,37 +29,37 @@ size_t EvaDisassembler::disassembleInstruction(CodeObject *co, size_t offset) {
 
   auto opcode = co->code[offset];
 
-  switch (opcode) {
-  case OP_HALT:
+  switch (static_cast<OpCode>(opcode)) {
+  case OpCode::HALT:
     return disassembleSimple(co, opcode, offset);
-  case OP_CONST:
+  case OpCode::CONST:
     return disassembleConst(co, opcode, offset);
-  case OP_ADD:
-  case OP_SUB:
-  case OP_MUL:
-  case OP_DIV:
-  case OP_POP:
-  case OP_RETURN:
+  case OpCode::ADD:
+  case OpCode::SUB:
+  case OpCode::MUL:
+  case OpCode::DIV:
+  case OpCode::POP:
+  case OpCode::RETURN:
     return disassembleSimple(co, opcode, offset);
-  case OP_SCOPE_EXIT:
-  case OP_CALL:
+  case OpCode::SCOPE_EXIT:
+  case OpCode::CALL:
     return disassembleWord(co, opcode, offset);
-  case OP_COMPARE:
+  case OpCode::COMPARE:
     return disassembleCompare(co, opcode, offset);
-  case OP_JMP_IF_FALSE:
-  case OP_JMP:
+  case OpCode::JMP_IF_FALSE:
+  case OpCode::JMP:
     return disassembleJump(co, opcode, offset);
-  case OP_GET_GLOBAL:
-  case OP_SET_GLOBAL:
+  case OpCode::GET_GLOBAL:
+  case OpCode::SET_GLOBAL:
     return disassembleGlobal(co, opcode, offset);
-  case OP_GET_LOCAL:
-  case OP_SET_LOCAL:
+  case OpCode::GET_LOCAL:
+  case OpCode::SET_LOCAL:
     return disassembleLocal(co, opcode, offset);
-  case OP_GET_CELL:
-  case OP_SET_CELL:
-  case OP_LOAD_CELL:
+  case OpCode::GET_CELL:
+  case OpCode::SET_CELL:
+  case OpCode::LOAD_CELL:
     return disassembleCell(co, opcode, offset);
-  case OP_MAKE_FUNCTION:
+  case OpCode::MAKE_FUNCTION:
     return disassembleMakeFunction(co, opcode, offset);
   default:
     DIE << "disassembleInstruction: no disassembly for "

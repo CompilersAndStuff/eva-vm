@@ -177,15 +177,15 @@ EvaValue EvaVm::eval() {
   for (;;) {
     /*dumpStack();*/
     auto opcode = READ_BYTE();
-    switch (opcode) {
-    case OP_HALT:
+    switch (static_cast<OpCode>(opcode)) {
+    case OpCode::HALT:
       return pop();
 
-    case OP_CONST:
+    case OpCode::CONST:
       push(GET_CONST());
       break;
 
-    case OP_ADD: {
+    case OpCode::ADD: {
       auto op2 = pop();
       auto op1 = pop();
 
@@ -204,19 +204,19 @@ EvaValue EvaVm::eval() {
       break;
     }
 
-    case OP_SUB:
+    case OpCode::SUB:
       BINARY_OP(-);
       break;
 
-    case OP_MUL:
+    case OpCode::MUL:
       BINARY_OP(*);
       break;
 
-    case OP_DIV:
+    case OpCode::DIV:
       BINARY_OP(/);
       break;
 
-    case OP_COMPARE: {
+    case OpCode::COMPARE: {
       auto op = READ_BYTE();
       auto op2 = pop();
       auto op1 = pop();
@@ -232,7 +232,7 @@ EvaValue EvaVm::eval() {
       }
       break;
     }
-    case OP_JMP_IF_FALSE: {
+    case OpCode::JMP_IF_FALSE: {
       auto cond = AS_BOOLEAN(pop());
       auto address = READ_SHORT();
 
@@ -243,30 +243,30 @@ EvaValue EvaVm::eval() {
       break;
     }
 
-    case OP_JMP: {
+    case OpCode::JMP: {
       ip = TO_ADDRESS(READ_SHORT());
       break;
     }
 
-    case OP_GET_GLOBAL: {
+    case OpCode::GET_GLOBAL: {
       auto globalIndex = READ_BYTE();
       push(global->get(globalIndex).value);
       break;
     }
 
-    case OP_SET_GLOBAL: {
+    case OpCode::SET_GLOBAL: {
       auto globalIndex = READ_BYTE();
       auto value = pop();
       global->set(globalIndex, value);
       break;
     }
 
-    case OP_POP: {
+    case OpCode::POP: {
       pop();
       break;
     }
 
-    case OP_GET_LOCAL: {
+    case OpCode::GET_LOCAL: {
       auto localIndex = READ_BYTE();
       if (localIndex < 0 || localIndex >= stack.size()) {
         DIE << "OP_GET_LOCAL: invalid variable index: " << (int)localIndex;
@@ -275,7 +275,7 @@ EvaValue EvaVm::eval() {
       break;
     }
 
-    case OP_SET_LOCAL: {
+    case OpCode::SET_LOCAL: {
       auto localIndex = READ_BYTE();
       auto value = peek(0);
       if (localIndex < 0 || localIndex >= stack.size()) {
@@ -285,7 +285,7 @@ EvaValue EvaVm::eval() {
       break;
     }
 
-    case OP_SCOPE_EXIT: {
+    case OpCode::SCOPE_EXIT: {
       auto count = READ_BYTE();
 
       *(sp - 1 - count) = peek(0);
@@ -294,7 +294,7 @@ EvaValue EvaVm::eval() {
       break;
     }
 
-    case OP_CALL: {
+    case OpCode::CALL: {
       auto argsCount = READ_BYTE();
       auto fnValue = peek(argsCount);
 
@@ -321,7 +321,7 @@ EvaValue EvaVm::eval() {
       break;
     }
 
-    case OP_RETURN: {
+    case OpCode::RETURN: {
       auto callerFrame = callStack.top();
       ip = callerFrame.ra;
       bp = callerFrame.bp;
@@ -331,13 +331,13 @@ EvaValue EvaVm::eval() {
       break;
     }
 
-    case OP_GET_CELL: {
+    case OpCode::GET_CELL: {
       auto cellIndex = READ_BYTE();
       push(fn->cells[cellIndex]->value);
       break;
     }
 
-    case OP_SET_CELL: {
+    case OpCode::SET_CELL: {
       auto cellIndex = READ_BYTE();
       auto value = peek(0);
       if (fn->cells.size() <= cellIndex) {
@@ -348,13 +348,13 @@ EvaValue EvaVm::eval() {
       break;
     }
 
-    case OP_LOAD_CELL: {
+    case OpCode::LOAD_CELL: {
       auto cellIndex = READ_BYTE();
       push(CELL(fn->cells[cellIndex]));
       break;
     }
 
-    case OP_MAKE_FUNCTION: {
+    case OpCode::MAKE_FUNCTION: {
       auto co = AS_CODE(pop());
       auto cellsCount = READ_BYTE();
       auto fnValue = MEM(ALLOC_FUNCTION, co);
