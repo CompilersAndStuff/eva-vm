@@ -3,15 +3,12 @@
 
 #include "../compiler/EvaCompiler.h"
 #include "../gc/EvaCollector.h"
-#include "../parser/EvaParser.h"
 #include "EvaValue.h"
 #include "Global.h"
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
-
-using syntax::EvaParser;
 
 #define READ_BYTE() *ip++
 #define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
@@ -87,8 +84,6 @@ public:
   EvaValue eval();
 
   void setGlobalVariables();
-
-  std::unique_ptr<EvaParser> parser;
 
   std::shared_ptr<Global> global;
 

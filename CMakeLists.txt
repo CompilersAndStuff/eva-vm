@@ -5,6 +5,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(EvaVm
     src/eva-vm.cpp
     src/Logger.cpp
+    src/parser/Expression.cpp
     src/vm/EvaValue.cpp
     src/vm/EvaVm.cpp
     src/vm/Global.cpp

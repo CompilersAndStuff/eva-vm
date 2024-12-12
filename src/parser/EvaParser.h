@@ -20,8 +20,8 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-private-field"
 
-#include <array>
 #include <assert.h>
+#include <array>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -50,49 +50,9 @@
 //   }
 //
 // clang-format off
-#include <string>
-#include <vector>
+#include "Expression.h"
 
-/**
- * Expression type.
- */
-enum class ExpType {
-  NUMBER,
-  STRING,
-  SYMBOL,
-  LIST,
-};
-
-/**
- * Expression.
- */
-struct Exp {
-  ExpType type;
-
-  int number;
-  std::string string;
-  std::vector<Exp> list;
-
-  // Numbers:
-  Exp(int number) : type(ExpType::NUMBER), number(number) {}
-
-  // Strings, Symbols:
-  Exp(std::string& strVal) {
-    if (strVal[0] == '"') {
-      type = ExpType::STRING;
-      string = strVal.substr(1, strVal.size() - 2);
-    } else {
-      type = ExpType::SYMBOL;
-      string = strVal;
-    }
-  }
-
-  // Lists:
-  Exp(std::vector<Exp> list) : type(ExpType::LIST), list(list) {}
-
-};
-
-using Value = Exp; // clang-format on
+using Value = Exp;  // clang-format on
 
 namespace syntax {
 
@@ -143,7 +103,7 @@ struct Token {
 
 using SharedToken = std::shared_ptr<Token>;
 
-typedef TokenType (*LexRuleHandler)(const Tokenizer &, const std::string &);
+typedef TokenType (*LexRuleHandler)(const Tokenizer&, const std::string&);
 
 // ------------------------------------------------------------------
 // Lex rule: [regex, handler]
@@ -166,11 +126,11 @@ enum TokenizerState {
 // Tokenizer.
 
 class Tokenizer {
-public:
+ public:
   /**
    * Initializes a parsing string.
    */
-  void initString(const std::string &str) {
+  void initString(const std::string& str) {
     str_ = str;
 
     // Initialize states.
@@ -232,7 +192,7 @@ public:
 
     auto lexRulesForState = lexRulesByStartConditions_.at(getCurrentState());
 
-    for (const auto &ruleIndex : lexRulesForState) {
+    for (const auto& ruleIndex : lexRulesForState) {
       auto rule = lexRules_[ruleIndex];
       std::smatch sm;
 
@@ -291,7 +251,7 @@ public:
    * line from the source, pointing with the ^ marker to the bad token.
    * In addition, shows `line:column` location.
    */
-  [[noreturn]] void throwUnexpectedToken(const std::string &symbol, int line,
+  [[noreturn]] void throwUnexpectedToken(const std::string& symbol, int line,
                                          int column) {
     std::stringstream ss{str_};
     std::string lineStr;
@@ -319,11 +279,11 @@ public:
    */
   std::string yytext;
 
-private:
+ private:
   /**
    * Captures token locations.
    */
-  void captureLocations_(const std::string &matched) {
+  void captureLocations_(const std::string& matched) {
     auto len = matched.length();
 
     // Absolute offsets.
@@ -457,12 +417,12 @@ std::map<TokenizerState, std::vector<size_t>> Tokenizer::lexRulesByStartConditio
 #endif
 // clang-format on
 
-#define POP_V()                                                                \
-  parser.valuesStack.back();                                                   \
+#define POP_V()              \
+  parser.valuesStack.back(); \
   parser.valuesStack.pop_back()
 
-#define POP_T()                                                                \
-  parser.tokensStack.back();                                                   \
+#define POP_T()              \
+  parser.tokensStack.back(); \
   parser.tokensStack.pop_back()
 
 #define PUSH_VR() parser.valuesStack.push_back(__)
@@ -492,7 +452,7 @@ class EvaParser;
 
 using yyparse = EvaParser;
 
-typedef void (*ProductionHandler)(yyparse &);
+typedef void (*ProductionHandler)(yyparse&);
 
 /**
  * Encoded production.
@@ -516,7 +476,7 @@ using Row = std::map<int, TableEntry>;
 // clang-format off
 class EvaParser {
   // clang-format on
-public:
+ public:
   /**
    * Parsing values stack.
    */
@@ -545,9 +505,9 @@ public:
   /**
    * Parses a string.
    */
-  Value parse(const std::string &str) {
+  Value parse(const std::string& str) {
     // clang-format off
-
+    
     // clang-format on
 
     // Initialize the tokenizer and the string.
@@ -630,7 +590,7 @@ public:
         statesStack.pop_back();
 
         // clang-format off
-
+        
         // clang-format on
 
         return result;
@@ -638,7 +598,7 @@ public:
     }
   }
 
-private:
+ private:
   /**
    * Throws parser error on unexpected token.
    */
@@ -799,6 +759,6 @@ std::array<Row, yyparse::ROWS_COUNT> yyparse::table_ = {
 };
 // clang-format on
 
-} // namespace syntax
+}  // namespace syntax
 
 #endif

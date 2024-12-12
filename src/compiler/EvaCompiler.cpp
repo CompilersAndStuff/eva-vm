@@ -2,7 +2,6 @@
 #include "../Logger.h"
 #include "../bytecode/OpCode.h"
 #include "../disassembler/EvaDisassembler.h"
-#include "../parser/EvaParser.h"
 #include "../vm/EvaValue.h"
 #include "../vm/Global.h"
 #include "Scope.h"
