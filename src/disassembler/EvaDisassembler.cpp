@@ -1,8 +1,8 @@
 #include "EvaDisassembler.h"
+#include "../Logger.h"
 #include "../bytecode/OpCode.h"
 #include "../vm/EvaValue.h"
 #include "../vm/Global.h"
-#include "../Logger.h"
 #include <iomanip>
 #include <ios>
 #include <iostream>

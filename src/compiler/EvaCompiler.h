@@ -2,9 +2,9 @@
 #define __EvaCompiler_h
 
 #include "../disassembler/EvaDisassembler.h"
+#include "../parser/Expression.h"
 #include "../vm/EvaValue.h"
 #include "../vm/Global.h"
-#include "../parser/Expression.h"
 #include "Scope.h"
 #include <cstdint>
 #include <memory>
@@ -92,7 +92,9 @@ private:
   void functionCall(const Exp &exp);
 
   template <typename T>
-  size_t allocConst(bool (*tester)(const EvaValue&), T (*converter)(const EvaValue &), EvaValue (*allocator)(T), const T &value) {
+  size_t allocConst(bool (*tester)(const EvaValue &),
+                    T (*converter)(const EvaValue &), EvaValue (*allocator)(T),
+                    const T &value) {
     for (auto i = 0; i < co->constants.size(); i++) {
       if (!tester(co->constants[i])) {
         continue;

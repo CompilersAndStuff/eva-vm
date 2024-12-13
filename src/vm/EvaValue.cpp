@@ -154,28 +154,23 @@ EvaValue makeObject(Object *value) {
 }
 
 EvaValue allocString(std::string value) {
-  return {
-    .type = EvaValueType::OBJECT,
-    .object = (Object *)new StringObject(value)
-  };
+  return {.type = EvaValueType::OBJECT,
+          .object = (Object *)new StringObject(value)};
 }
 
 EvaValue allocCode(const std::string &name, size_t arity) {
-  return {
-    .type = EvaValueType::OBJECT,
-    .object = (Object *)new CodeObject(name, arity)
-  };
+  return {.type = EvaValueType::OBJECT,
+          .object = (Object *)new CodeObject(name, arity)};
 }
 
 EvaValue allocNative(NativeFn fn, const std::string &name, size_t arity) {
-  return {
-    .type = EvaValueType::OBJECT,
-    .object = (Object *)new NativeObject(fn, name, arity)
-  };
+  return {.type = EvaValueType::OBJECT,
+          .object = (Object *)new NativeObject(fn, name, arity)};
 }
 
 EvaValue allocFunction(CodeObject *co) {
-  return {.type = EvaValueType::OBJECT, .object = (Object *)new FunctionObject(co)};
+  return {.type = EvaValueType::OBJECT,
+          .object = (Object *)new FunctionObject(co)};
 }
 
 EvaValue allocCell(EvaValue co) {
@@ -186,13 +181,9 @@ EvaValue cell(CellObject *cellObject) {
   return makeObject((Object *)cellObject);
 }
 
-double asNumber(const EvaValue &evaValue) {
-  return evaValue.number;
-}
+double asNumber(const EvaValue &evaValue) { return evaValue.number; }
 
-bool asBoolean(const EvaValue &evaValue) {
-  return evaValue.boolean;
-}
+bool asBoolean(const EvaValue &evaValue) { return evaValue.boolean; }
 
 StringObject *asString(const EvaValue &evaValue) {
   return (StringObject *)evaValue.object;
@@ -202,23 +193,21 @@ std::string asCppString(const EvaValue &evaValue) {
   return asString(evaValue)->string;
 }
 
-Object *asObject(const EvaValue &evaValue) {
-  return evaValue.object;
-}
+Object *asObject(const EvaValue &evaValue) { return evaValue.object; }
 
 CodeObject *asCode(const EvaValue &evaValue) {
-  return (CodeObject*)evaValue.object;
+  return (CodeObject *)evaValue.object;
 }
 
 NativeObject *asNative(const EvaValue &evaValue) {
-  return (NativeObject*)evaValue.object;
+  return (NativeObject *)evaValue.object;
 }
 
 FunctionObject *asFunction(const EvaValue &evaValue) {
-  return (FunctionObject*)evaValue.object;
+  return (FunctionObject *)evaValue.object;
 }
 CellObject *asCell(const EvaValue &evaValue) {
-  return (CellObject*)evaValue.object;
+  return (CellObject *)evaValue.object;
 }
 
 bool isNumber(const EvaValue &evaValue) {

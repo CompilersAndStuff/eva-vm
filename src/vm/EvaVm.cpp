@@ -15,27 +15,21 @@
 
 using syntax::EvaParser;
 
-uint8_t EvaVm::readByte() {
-  return *ip++;
-}
+uint8_t EvaVm::readByte() { return *ip++; }
 
 uint16_t EvaVm::readShort() {
   ip += 2;
   return (((uint16_t)ip[-2]) << 8) | ip[-1];
 }
 
-uint8_t *EvaVm::toAddress(size_t index) {
-  return &fn->co->code[index];
-}
+uint8_t *EvaVm::toAddress(size_t index) { return &fn->co->code[index]; }
 
-EvaValue &EvaVm::getConst() {
-  return fn->co->constants[readByte()];
-}
+EvaValue &EvaVm::getConst() { return fn->co->constants[readByte()]; }
 
 void EvaVm::binaryOp(double (*op)(double, double)) {
-    auto op2 = asNumber(pop());
-    auto op1 = asNumber(pop());
-    push(makeNumber(op(op1, op2)));
+  auto op2 = asNumber(pop());
+  auto op1 = asNumber(pop());
+  push(makeNumber(op(op1, op2)));
 }
 
 EvaVm::EvaVm()
@@ -188,15 +182,15 @@ EvaValue EvaVm::eval() {
     }
 
     case OpCode::SUB:
-      binaryOp([](auto a, auto b) {return a - b;});
+      binaryOp([](auto a, auto b) { return a - b; });
       break;
 
     case OpCode::MUL:
-      binaryOp([](auto a, auto b) {return a * b;});
+      binaryOp([](auto a, auto b) { return a * b; });
       break;
 
     case OpCode::DIV:
-      binaryOp([](auto a, auto b) {return a / b;});
+      binaryOp([](auto a, auto b) { return a / b; });
       break;
 
     case OpCode::COMPARE: {

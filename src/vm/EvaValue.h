@@ -1,10 +1,10 @@
 #ifndef __EvaValue_h
 #define __EvaValue_h
 
-#include <iostream>
-#include <list>
 #include <cstdint>
 #include <functional>
+#include <iostream>
+#include <list>
 #include <string>
 #include <vector>
 

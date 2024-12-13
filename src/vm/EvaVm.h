@@ -27,8 +27,7 @@ class EvaVm {
 
   void binaryOp(double (*op)(double, double));
 
-  template <typename T>
-  void compareValues(uint8_t &op, T v1, T v2) {
+  template <typename T> void compareValues(uint8_t &op, T v1, T v2) {
     bool res;
     switch (op) {
     case 0:

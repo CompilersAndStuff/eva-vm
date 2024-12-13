@@ -11,18 +11,18 @@
 #include <vector>
 
 void EvaCompiler::functionCall(const Exp &exp) {
-    gen(exp.list[0]);
-    for (auto i = 1; i < exp.list.size(); i++) {
-      gen(exp.list[i]);
-    }
-    emit(static_cast<uint8_t>(OpCode::CALL));
-    emit(exp.list.size() - 1);
+  gen(exp.list[0]);
+  for (auto i = 1; i < exp.list.size(); i++) {
+    gen(exp.list[i]);
+  }
+  emit(static_cast<uint8_t>(OpCode::CALL));
+  emit(exp.list.size() - 1);
 }
 
 void EvaCompiler::genBinaryOp(const Exp &exp, uint8_t op) {
-    gen(exp.list[1]);
-    gen(exp.list[2]);
-    emit(op);
+  gen(exp.list[1]);
+  gen(exp.list[2]);
+  emit(op);
 }
 
 EvaCompiler::EvaCompiler(std::shared_ptr<Global> global)
@@ -313,7 +313,9 @@ void EvaCompiler::disassembleBytecode() {
 
 FunctionObject *EvaCompiler::getMainFunction() { return main; }
 
-std::set<Traceable *> &EvaCompiler::getConstantObjects() { return constantObjects_; }
+std::set<Traceable *> &EvaCompiler::getConstantObjects() {
+  return constantObjects_;
+}
 
 EvaValue EvaCompiler::createCodeObjectValue(const std::string &name,
                                             size_t arity) {
@@ -466,7 +468,7 @@ size_t EvaCompiler::numericConstIdx(double value) {
 
 size_t EvaCompiler::stringConstIdx(const std::string &value) {
   auto res = allocConst(isString, asCppString, allocString, value);
-  constantObjects_.insert((Traceable*)co->constants.back().object);
+  constantObjects_.insert((Traceable *)co->constants.back().object);
   return res;
 }
 

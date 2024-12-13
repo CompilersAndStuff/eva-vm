@@ -28,11 +28,10 @@ struct Exp {
   Exp(int number);
 
   // Strings, Symbols:
-  Exp(std::string& strVal);
+  Exp(std::string &strVal);
 
   // Lists:
   Exp(std::vector<Exp> list);
-
 };
 
 #endif
