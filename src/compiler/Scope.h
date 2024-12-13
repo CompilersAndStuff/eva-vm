@@ -16,6 +16,7 @@ enum class ScopeType {
 enum class AllocType {
   GLOBAL,
   LOCAL,
+  LOCAL_FROM_FN,
   CELL,
 };
 

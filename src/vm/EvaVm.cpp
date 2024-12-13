@@ -124,11 +124,11 @@ void EvaVm::maybeGC() {
     return;
   }
 
-  std::cout << "---------- BEFORE GC STATS ----------\n";
-  Traceable::printStats();
+  /*std::cout << "---------- BEFORE GC STATS ----------\n";*/
+  /*Traceable::printStats();*/
   collector->gc(roots);
-  std::cout << "---------- AFTER GC STATS ----------\n";
-  Traceable::printStats();
+  /*std::cout << "---------- AFTER GC STATS ----------\n";*/
+  /*Traceable::printStats();*/
 }
 
 EvaValue EvaVm::exec(const std::string &program) {

@@ -7,8 +7,15 @@ int main(int argc, char *argv[]) {
     EvaVm vm;
 
     auto program = R"(
-    (+ "Hello, " "World!")
-    (+ "Hello, " "World!")
+      (def t (a)
+        (lambda (b)
+          (begin 
+            (+ a b)
+            (lambda (c) (+ a (+ b c) ) ) ) ) )
+
+      (((t 1) 2) 3)
+
+
     )";
 
     log(program);

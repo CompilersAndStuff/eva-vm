@@ -48,7 +48,12 @@ void Scope::maybePromote(const std::string &name) {
 
   auto [ownerScope, allocType] = resolve(name, initAllocType);
 
-  allocInfo[name] = allocType;
+  if (ownerScope->type == ScopeType::FUNCTION &&
+      allocType == AllocType::LOCAL && type == ScopeType::BLOCK) {
+    allocInfo[name] = AllocType::LOCAL_FROM_FN;
+  } else {
+    allocInfo[name] = allocType;
+  }
 
   if (allocType == AllocType::CELL) {
     promote(name, ownerScope);
@@ -67,8 +72,13 @@ void Scope::promote(const std::string &name, Scope *ownerScope) {
 
 std::pair<Scope *, AllocType> Scope::resolve(const std::string &name,
                                              AllocType allocType) {
-  if (allocInfo.count(name) != 0) {
+  if (allocInfo.count(name) != 0 &&
+      allocInfo[name] != AllocType::LOCAL_FROM_FN) {
     return std::make_pair(this, allocType);
+  }
+
+  if (allocInfo[name] == AllocType::LOCAL_FROM_FN) {
+    allocInfo[name] = AllocType::LOCAL;
   }
 
   if (type == ScopeType::FUNCTION) {
@@ -94,6 +104,9 @@ int Scope::getNameGetter(const std::string &name) {
     return static_cast<int>(OpCode::GET_LOCAL);
   case AllocType::CELL:
     return static_cast<int>(OpCode::GET_CELL);
+  case AllocType::LOCAL_FROM_FN:
+    DIE << "unreachable";
+    return 0;
   }
 }
 
@@ -105,5 +118,8 @@ int Scope::getNameSetter(const std::string &name) {
     return static_cast<int>(OpCode::SET_LOCAL);
   case AllocType::CELL:
     return static_cast<int>(OpCode::SET_CELL);
+  case AllocType::LOCAL_FROM_FN:
+    DIE << "unreachable";
+    return 0;
   }
 }
