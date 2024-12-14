@@ -7,14 +7,15 @@ int main(int argc, char *argv[]) {
     EvaVm vm;
 
     auto program = R"(
-      (def t (a)
-        (lambda (b)
-          (begin 
-            (+ a b)
-            (lambda (c) (+ a (+ b c) ) ) ) ) )
+      (def t (a q)
+        (begin 
+          (print (+ a q))
+          (lambda (b)
+            (lambda (c) (+ a (+ b c) ) ) )) )
 
-      (((t 1) 2) 3)
+      (((t 1 10) 2) 3)
 
+      /*(print (+ 1 1))*/
 
     )";
 

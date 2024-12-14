@@ -105,8 +105,7 @@ int Scope::getNameGetter(const std::string &name) {
   case AllocType::CELL:
     return static_cast<int>(OpCode::GET_CELL);
   case AllocType::LOCAL_FROM_FN:
-    DIE << "unreachable";
-    return 0;
+    return static_cast<int>(OpCode::GET_LOCAL);
   }
 }
 
@@ -119,7 +118,6 @@ int Scope::getNameSetter(const std::string &name) {
   case AllocType::CELL:
     return static_cast<int>(OpCode::SET_CELL);
   case AllocType::LOCAL_FROM_FN:
-    DIE << "unreachable";
-    return 0;
+    return static_cast<int>(OpCode::GET_LOCAL);
   }
 }

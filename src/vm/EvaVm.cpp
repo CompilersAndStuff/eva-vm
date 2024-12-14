@@ -362,6 +362,15 @@ void EvaVm::setGlobalVariables() {
       },
       1);
 
+  global->addNativeFunction(
+      "print",
+      [&]() {
+        auto x = peek(0);
+        log(x);
+        push(x);
+      },
+      1);
+
   global->addConst("VERSION", 1);
 }
 

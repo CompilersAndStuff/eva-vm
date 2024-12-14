@@ -492,5 +492,5 @@ std::map<std::string, uint8_t> EvaCompiler::compareOps_ = {
 };
 
 std::set<std::string> EvaCompiler::keywords = {
-    "var", "set", "def", "begin", "while", "if", "lambda", "+", "-",
-    "*",   "/",   "<",   ">",     "==",    ">=", "<=",     "!="};
+    "var", "set", "def", "begin", "while", "if", "lambda", "print", "+",
+    "-",   "*",   "/",   "<",     ">",     "==", ">=",     "<=",    "!="};
